@@ -23,6 +23,18 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("ciRelease") {
+            val storePath = providers.gradleProperty("qist.signing.storeFile").orNull
+            if (storePath != null) {
+                storeFile = file(storePath)
+                storePassword = providers.gradleProperty("qist.signing.storePassword").orNull
+                keyAlias = providers.gradleProperty("qist.signing.keyAlias").orNull
+                keyPassword = providers.gradleProperty("qist.signing.keyPassword").orNull
+            }
+        }
+    }
+
     buildTypes {
         debug {
             buildConfigField("String", "API_URL", "\"${setting("qist.apiUrl.debug")}\"")
@@ -30,6 +42,9 @@ android {
             buildConfigField("boolean", "BLOCK_USB_DEBUGGING", "false")
         }
         release {
+            if (providers.gradleProperty("qist.signing.storeFile").isPresent) {
+                signingConfig = signingConfigs.getByName("ciRelease")
+            }
             val releaseUrl = setting("qist.apiUrl.release")
             require(releaseUrl.startsWith("https://")) { "qist.apiUrl.release must use https" }
             buildConfigField("String", "API_URL", "\"$releaseUrl\"")
