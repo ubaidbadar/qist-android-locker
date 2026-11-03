@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Qist</string>
+    <string name="admin_description">Keeps this financed phone linked to the shop until it is paid off.</string>
+
+    <!-- Lock screen -->
+    <string name="lock_title">This phone is locked</string>
+    <string name="lock_amount_due">Amount due</string>
+    <string name="lock_next_due">Next payment due %1$s</string>
+    <string name="lock_pay_at">Pay at %1$s</string>
+    <string name="lock_call_branch">Call branch</string>
+    <string name="lock_call_branch_description">Call %1$s at %2$s</string>
+    <string name="lock_emergency_call">Emergency call</string>
+
+</resources>
