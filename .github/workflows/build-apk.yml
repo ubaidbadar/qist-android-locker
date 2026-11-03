@@ -34,14 +34,9 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          API_URL="${{ secrets.API_URL || vars.API_URL || secrets.VITE_API_URL || vars.VITE_API_URL }}"
-          if [ -n "$API_URL" ]; then
-            echo "Building APK pointing to: $API_URL"
-            ./gradlew assembleDebug -Pqist.apiUrl.debug="$API_URL" --no-daemon
-          else
-            echo "Building APK using default apiUrl in gradle.properties"
-            ./gradlew assembleDebug --no-daemon
-          fi
+          API_URL="${{ secrets.API_URL || vars.API_URL || secrets.VITE_API_URL || vars.VITE_API_URL || 'https://qist.restora.live/api/v1' }}"
+          echo "Building APK pointing to: $API_URL"
+          ./gradlew assembleDebug -Pqist.apiUrl.debug="$API_URL" --no-daemon
 
       - name: Upload APK as Artifact
         uses: actions/upload-artifact@v4
