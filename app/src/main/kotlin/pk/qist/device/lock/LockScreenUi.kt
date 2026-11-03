@@ -9,5 +9,6 @@ data class LockScreenUi(
     val amountDue: String?,
     val nextDueDate: String?,
     val branchName: String?,
-    val branchPhone: String?
+    val branchPhone: String?,
+    val overdueDays: Int? = null
 )

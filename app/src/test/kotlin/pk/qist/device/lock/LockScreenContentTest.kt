@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -23,7 +24,8 @@ class LockScreenContentTest {
         amountDue = "Rs 15,000",
         nextDueDate = "12 Oct 2026",
         branchName = "Saddar",
-        branchPhone = "0300 1234567"
+        branchPhone = "0300 1234567",
+        overdueDays = 3
     )
 
     private fun show(screen: LockScreenUi, onCall: (String) -> Unit = {}, onEmergency: () -> Unit = {}) =
@@ -35,11 +37,13 @@ class LockScreenContentTest {
     fun `shows the message, amount, due date and branch`() {
         show(full)
 
-        compose.onNodeWithText("This phone is locked").assertIsDisplayed()
-        compose.onNodeWithText("Please pay your installment").assertIsDisplayed()
-        compose.onNodeWithText("Rs 15,000").assertIsDisplayed()
-        compose.onNodeWithText("Next payment due 12 Oct 2026").assertIsDisplayed()
-        compose.onNodeWithText("Pay at Saddar").assertIsDisplayed()
+        compose.onNodeWithText("Your phone is locked").assertIsDisplayed()
+        compose.onNodeWithText("An installment payment is overdue. Please pay your retailer to unlock your phone.")
+            .assertIsDisplayed()
+        compose.onNodeWithText("Rs 15,000").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("12 Oct 2026").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("3 days").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Saddar").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -47,7 +51,7 @@ class LockScreenContentTest {
         var dialled: String? = null
         show(full, onCall = { dialled = it })
 
-        compose.onNodeWithContentDescription("Call Saddar at 0300 1234567").performClick()
+        compose.onNodeWithContentDescription("Call Saddar at 0300 1234567").performScrollTo().performClick()
 
         assertEquals("0300 1234567", dialled)
     }
@@ -57,15 +61,15 @@ class LockScreenContentTest {
         var emergencies = 0
         show(full.copy(branchPhone = null), onEmergency = { emergencies++ })
 
-        compose.onNodeWithText("Call branch").assertDoesNotExist()
-        compose.onNodeWithText("Emergency call").performClick()
+        compose.onNodeWithText("Call retailer").assertDoesNotExist()
+        compose.onNodeWithText("Emergency call").performScrollTo().performClick()
 
         assertEquals(1, emergencies)
     }
 
     @Test
     fun `nothing about money shows when nothing is due`() {
-        show(full.copy(amountDue = null, nextDueDate = null))
+        show(full.copy(amountDue = null, nextDueDate = null, overdueDays = null))
 
         compose.onNodeWithText("Amount due").assertDoesNotExist()
         compose.onNodeWithText("Please pay your installment").assertIsDisplayed()

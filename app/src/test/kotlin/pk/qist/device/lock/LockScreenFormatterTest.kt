@@ -1,5 +1,6 @@
 package pk.qist.device.lock
 
+import java.util.Date
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -44,10 +45,20 @@ class LockScreenFormatterTest {
                 branchName = "Saddar",
                 branchPhone = "0300 1234567",
                 message = "Please pay"
-            )
+            ),
+            now = Date(0)
         )
 
         assertEquals(LockScreenUi("Please pay", "Rs 15,000", "12 Oct 2026", "Saddar", "0300 1234567"), ui)
+    }
+
+    @Test
+    fun `overdue days follow the Pakistan calendar date`() {
+        val screen = LockScreen(amountDue = 100, nextDueDate = "1970-01-01")
+        assertNull(LockScreenFormatter.format(screen, now = Date(68_399_999)).overdueDays)
+        assertEquals(1, LockScreenFormatter.format(screen, now = Date(68_400_000)).overdueDays)
+        assertNull(LockScreenFormatter.format(screen.copy(amountDue = 0), now = Date(68_400_000)).overdueDays)
+        assertNull(LockScreenFormatter.format(screen.copy(nextDueDate = "1970-02-31"), now = Date(68_400_000)).overdueDays)
     }
 
     @Test

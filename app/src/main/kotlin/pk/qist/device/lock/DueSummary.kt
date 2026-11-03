@@ -1,41 +1,64 @@
 package pk.qist.device.lock
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import pk.qist.device.R
 
-/** The amount owed, large, on an amber card, with the next due date under it. Shows nothing when neither is known. */
 @Composable
-fun DueSummary(amountDue: String?, nextDueDate: String?, modifier: Modifier = Modifier) {
-    if (amountDue == null && nextDueDate == null) return
+fun DueSummary(screen: LockScreenUi, modifier: Modifier = Modifier) {
+    val overdue = screen.overdueDays?.let { pluralStringResource(R.plurals.lock_days, it, it) }
+    val rows = listOfNotNull(
+        screen.amountDue?.let { R.string.lock_amount_due to it },
+        screen.nextDueDate?.let { R.string.lock_due_date to it },
+        overdue?.let { R.string.lock_overdue_by to it },
+        screen.branchName?.let { R.string.lock_retailer to it }
+    )
+    if (rows.isEmpty()) return
+
+    val colors = MaterialTheme.colorScheme
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-        )
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface, contentColor = colors.onSurface)
     ) {
-        Column(Modifier.padding(20.dp)) {
-            if (amountDue != null) {
-                Text(stringResource(R.string.lock_amount_due), style = MaterialTheme.typography.titleMedium)
-                Text(amountDue, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-            }
-            if (nextDueDate != null) {
-                Text(
-                    stringResource(R.string.lock_next_due, nextDueDate),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            rows.forEachIndexed { index, (label, value) ->
+                if (index > 0) HorizontalDivider(color = colors.outlineVariant)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = stringResource(label),
+                        modifier = Modifier.weight(0.9f),
+                        color = colors.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = value,
+                        modifier = Modifier.weight(1.1f),
+                        color = if (label == R.string.lock_overdue_by) colors.tertiary else colors.onSurface,
+                        textAlign = TextAlign.End,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

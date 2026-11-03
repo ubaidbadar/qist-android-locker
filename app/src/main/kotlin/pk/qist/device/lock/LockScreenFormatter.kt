@@ -1,23 +1,41 @@
 package pk.qist.device.lock
 
+import java.text.ParsePosition
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import java.util.concurrent.TimeUnit
 import pk.qist.device.data.LockScreen
 
-/**
- * Turns the server's lock screen (paisa, YYYY-MM-DD) into display text. Pure Kotlin with no locale or time-zone
- * lookups, so it is fast on a cold start and gives the same output on every phone.
- */
+/** Formats the lock data and counts overdue calendar days in the shop's time zone. */
 object LockScreenFormatter {
     private const val PAISA_PER_RUPEE = 100
     private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
     private const val FALLBACK_MESSAGE = "This phone is locked. Please contact the shop that sold it to unlock it."
 
-    fun format(screen: LockScreen) = LockScreenUi(
+    fun format(screen: LockScreen, now: Date = Date()) = LockScreenUi(
         message = screen.message.ifBlank { FALLBACK_MESSAGE },
         amountDue = screen.amountDue.takeIf { it > 0 }?.let(::rupees),
         nextDueDate = screen.nextDueDate?.let(::date),
         branchName = screen.branchName.ifBlank { null },
-        branchPhone = screen.branchPhone.ifBlank { null }
+        branchPhone = screen.branchPhone.ifBlank { null },
+        overdueDays = screen.nextDueDate?.takeIf { screen.amountDue > 0 }?.let { overdueDays(it, now) }
     )
+
+    private fun overdueDays(dueDate: String, now: Date): Int? {
+        if (!dueDate.matches(Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}"))) return null
+        val calendarDate = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply {
+            isLenient = false
+            timeZone = TimeZone.getTimeZone("Asia/Karachi")
+        }
+        val today = calendarDate.format(now)
+        // Parse both dates at UTC midnight so the difference is in calendar days.
+        calendarDate.timeZone = TimeZone.getTimeZone("UTC")
+        val due = calendarDate.parse(dueDate, ParsePosition(0)) ?: return null
+        val current = calendarDate.parse(today, ParsePosition(0)) ?: return null
+        return TimeUnit.MILLISECONDS.toDays(current.time - due.time).toInt().takeIf { it > 0 }
+    }
 
     /** 1_500_050 paisa → "Rs 15,000.50"; whole rupees drop the paisa: "Rs 15,000". */
     fun rupees(paisa: Long): String {

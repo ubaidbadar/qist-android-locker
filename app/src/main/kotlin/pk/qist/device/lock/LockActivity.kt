@@ -2,7 +2,9 @@ package pk.qist.device.lock
 
 import android.app.ActivityManager
 import android.app.admin.DevicePolicyManager
+import android.graphics.Color
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
@@ -26,7 +28,10 @@ class LockActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
         // Back does nothing here; in kiosk mode there is nowhere to go back to.
         onBackPressedDispatcher.addCallback(this) {}
 
