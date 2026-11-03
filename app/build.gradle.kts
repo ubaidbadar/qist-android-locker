@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.google.services)
     alias(libs.plugins.ktlint)
 }
 
@@ -18,8 +19,8 @@ android {
         // QR provisioning of a Device Owner needs Android 7.0.
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -113,6 +114,7 @@ dependencies {
     implementation(libs.serialization.json)
     implementation(libs.coroutines.android)
     implementation(libs.profileinstaller)
+    implementation(libs.firebase.messaging)
 
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)

@@ -40,7 +40,7 @@ class CheckIn(
             is Enrolment.Releasing -> return confirmRelease(enrolment)
             else -> return CheckInOutcome.NotEnrolled
         }
-        when (val result = api.checkIn(enrolled.credential, CheckInRequest(appInfo.appVersion, state.lockState))) {
+        when (val result = api.checkIn(enrolled.credential, CheckInRequest(appInfo.appVersion, state.lockState, state.pushToken.takeIf { it.isNotBlank() }))) {
             is ApiResult.Success -> apply(enrolled.credential, state, result.value)
             ApiResult.Unauthorized -> standDown()
             ApiResult.NetworkError, is ApiResult.ServerError -> CheckInOutcome.RetryLater

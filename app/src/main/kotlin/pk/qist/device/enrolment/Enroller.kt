@@ -39,7 +39,8 @@ class Enroller(
     /** Redeems the waiting token, if any. Protections go on only after the server has accepted the phone. */
     suspend fun enrol(): EnrolOutcome {
         val pending = store.data.first().enrolment as? Enrolment.Pending ?: return EnrolOutcome.NothingToDo
-        val request = EnrollRequest(pending.enrolToken, appInfo.appVersion, appInfo.androidVersion)
+        val pushToken = store.data.first().pushToken.takeIf { it.isNotBlank() }
+        val request = EnrollRequest(pending.enrolToken, appInfo.appVersion, appInfo.androidVersion, pushToken = pushToken)
         return when (val result = api.enroll(request)) {
             is ApiResult.Success -> {
                 val credential = result.value
