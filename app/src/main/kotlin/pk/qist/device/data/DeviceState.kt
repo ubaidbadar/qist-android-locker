@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class DeviceState(
     val enrolment: Enrolment = Enrolment.NotProvisioned,
     val lockState: LockState = LockState.UNLOCKED,
+    val pushToken: String = "",
     val lockScreen: LockScreen? = null,
     val checkInSeconds: Long = DEFAULT_CHECK_IN_SECONDS
 ) {

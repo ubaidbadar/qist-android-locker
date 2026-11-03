@@ -21,6 +21,15 @@
         android:theme="@style/Theme.Qist"
         tools:targetApi="37">
 
+        <!-- FCM sends only wake-up signals; authenticated commands still come from our API. -->
+        <service
+            android:name=".push.QistMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- The lock screen. Enters kiosk mode by itself when the app is on the lock-task allow-list. -->
         <activity
             android:name=".lock.LockActivity"

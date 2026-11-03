@@ -4,6 +4,7 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
@@ -40,6 +41,7 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
     override fun checkInNow() {
         val request = OneTimeWorkRequestBuilder<CheckInWorker>()
             .setConstraints(online)
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
             .build()
         // KEEP: a check-in already waiting or running covers this request.
