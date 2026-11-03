@@ -35,6 +35,7 @@ class DpmDevicePolicy(
 
     override fun lock() = asOwner {
         applyProtections()
+        restrictNetworkChanges()
         // Only these apps may run while locked: ours, and the dialer so emergency calls and "Call branch" work.
         dpm.setLockTaskPackages(admin, lockTaskPackages())
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -62,7 +63,29 @@ class DpmDevicePolicy(
         dpm.setUninstallBlocked(admin, packageName, true)
     }
 
+    /**
+     * Keep a locked phone reachable: users cannot change Wi-Fi networks, cellular settings or airplane mode.
+     * On Android 13+ also block Wi-Fi on/off toggles. Existing network connections are left unchanged.
+     * These policy restrictions cannot prevent signal loss, SIM removal or an exhausted data plan.
+     */
+    private fun restrictNetworkChanges() {
+        networkRestrictions().forEach { dpm.addUserRestriction(admin, it) }
+    }
+
+    private fun networkRestrictions() = buildList {
+        add(UserManager.DISALLOW_CONFIG_WIFI)
+        add(UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            add(UserManager.DISALLOW_AIRPLANE_MODE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(UserManager.DISALLOW_CHANGE_WIFI_STATE)
+        }
+    }
+
     private fun removeLock() {
+        // Restore normal connectivity controls without disturbing the current Wi-Fi or mobile connection.
+        networkRestrictions().forEach { dpm.clearUserRestriction(admin, it) }
         setLockHome(enabled = false)
         // Emptying the allow-list also ends kiosk mode if the lock screen is still showing.
         dpm.setLockTaskPackages(admin, emptyArray())
