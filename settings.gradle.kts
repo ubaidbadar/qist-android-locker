@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "qist-device"
 include(":app")
+include(":customer")
