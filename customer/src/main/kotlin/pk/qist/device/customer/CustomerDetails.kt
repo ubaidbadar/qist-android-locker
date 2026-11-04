@@ -91,7 +91,7 @@ internal fun PlanDetails(data: DashboardSample) {
 }
 
 @Composable
-internal fun CustomerProfile(data: DashboardSample, phone: String, onLanguage: () -> Unit, onLogout: () -> Unit, notifications: Boolean, onNotifications: (Boolean) -> Unit) {
+internal fun CustomerProfile(data: DashboardSample, phone: String, onLanguage: () -> Unit, onLogout: () -> Unit, notifications: Boolean, onNotifications: (Boolean) -> Unit, onOpenPage: (String) -> Unit) {
     var dialog by rememberSaveable { mutableStateOf("") }
     val language = copy("English", "اردو")
     Panel {
@@ -119,7 +119,7 @@ internal fun CustomerProfile(data: DashboardSample, phone: String, onLanguage: (
         }
     }
     Panel {
-        SettingsRow(copy("Language", "زبان"), R.drawable.detail_language, onClick = onLanguage) {
+        SettingsRow(copy("Language", "زبان"), R.drawable.detail_language, onClick = { dialog = "language" }) {
             Caption(language)
             Chevron()
         }
@@ -128,22 +128,26 @@ internal fun CustomerProfile(data: DashboardSample, phone: String, onLanguage: (
             Switch(checked = notifications, onCheckedChange = onNotifications)
         }
         HorizontalDivider(color = Divider)
-        SettingsRow(copy("Help and support", "مدد اور معاونت"), R.drawable.detail_help, onClick = { dialog = "help" }) { Chevron() }
+        SettingsRow(copy("Help and support", "مدد اور معاونت"), R.drawable.detail_help, onClick = { onOpenPage("help") }) { Chevron() }
         HorizontalDivider(color = Divider)
-        SettingsRow(copy("Privacy policy", "رازداری کی پالیسی"), R.drawable.detail_shield, onClick = { dialog = "privacy" }) { Chevron() }
+        SettingsRow(copy("Privacy policy", "رازداری کی پالیسی"), R.drawable.detail_shield, onClick = { onOpenPage("privacy") }) { Chevron() }
         HorizontalDivider(color = Divider)
         SettingsRow(copy("Log out", "لاگ آؤٹ"), R.drawable.detail_logout, destructive = true, onClick = { dialog = "logout" }) { Chevron() }
     }
     when (dialog) {
         "contact" -> DetailDialog(copy("Contact retailer", "دکاندار سے رابطہ"), copy("This demo has no retailer phone number.", "ڈیمو میں دکاندار کا نمبر موجود نہیں۔")) { dialog = "" }
-        "help" -> DetailDialog(copy("Help and support", "مدد اور معاونت"), copy("For questions about your installment plan, contact your retailer.", "اپنی اقساط کے بارے میں اپنے دکاندار سے رابطہ کریں۔")) { dialog = "" }
-        "privacy" -> DetailDialog(copy("Privacy policy", "رازداری کی پالیسی"), copy("This demo does not send your phone number or payment data to a server.", "ڈیمو آپ کا نمبر یا ادائیگی کی معلومات سرور پر نہیں بھیجتا۔")) { dialog = "" }
-        "logout" -> AlertDialog(
-            onDismissRequest = { dialog = "" },
-            title = { Text(copy("Log out?", "لاگ آؤٹ کریں؟")) },
-            confirmButton = { TextButton(onClick = { dialog = ""; onLogout() }) { Text(copy("Log out", "لاگ آؤٹ")) } },
-            dismissButton = { TextButton(onClick = { dialog = "" }) { Text(copy("Cancel", "منسوخ")) } },
+        "language" -> LanguagePicker(
+            selectedUrdu = language == "اردو",
+            onDismiss = { dialog = "" },
+            onApply = { selected ->
+                dialog = ""
+                if (selected != (language == "اردو")) onLanguage()
+            },
         )
+        "logout" -> LogoutConfirmation({ dialog = "" }) {
+            dialog = ""
+            onLogout()
+        }
     }
 }
 

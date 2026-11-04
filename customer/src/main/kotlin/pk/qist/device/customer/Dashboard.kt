@@ -47,7 +47,13 @@ internal fun Dashboard(
         showPrompt = false
     }
 
+    var profilePage by rememberSaveable { mutableStateOf("") }
+    BackHandler(profilePage.isNotEmpty()) { profilePage = "" }
     BackHandler(inbox) { inbox = false }
+    if (profilePage.isNotEmpty()) {
+        ProfileInformation(data, privacy = profilePage == "privacy") { profilePage = "" }
+        return
+    }
     if (inbox) {
         NotificationInbox(data, unread, { inbox = false }, { unread = 0 }) { bit ->
             unread = unread and bit.inv()
@@ -114,7 +120,7 @@ internal fun Dashboard(
                     when (tab) {
                         CustomerTab.Payments -> PaymentHistory(data)
                         CustomerTab.Plan -> PlanDetails(data)
-                        CustomerTab.Profile -> CustomerProfile(data, phone, onLanguage, onLogout, allowed, ::setNotifications)
+                        CustomerTab.Profile -> CustomerProfile(data, phone, onLanguage, onLogout, allowed, ::setNotifications) { profilePage = it }
                         CustomerTab.Home -> Unit
                     }
                 }
