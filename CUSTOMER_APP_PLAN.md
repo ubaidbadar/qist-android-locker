@@ -1,6 +1,6 @@
 # Qist customer app plan
 
-Status: approved; initial customer module and workflows.
+Status: approved. Milestones 1–3 are on `customer-app`; branch release validation is recorded below.
 Discovery baseline: `main` at `c78798db648279f3319ca4b6824d92b964213f9d` (4 November 2026). Recheck the default-branch HEAD before implementation.
 
 ## Structure and isolation
@@ -38,7 +38,7 @@ Copy supplied adaptive background, foreground, monochrome, adaptive wrappers, an
 1. Welcome: navy background, gradient white-keyhole badge, Qist wordmark, Urdu language control, heading/subtitle, cyan Get started pill and retailer guidance.
 2. Phone number: light background, back control, fixed +92 prefix, validated Pakistani mobile input, Send code pill, registration help. Normalize pasted local/international formats.
 3. Verify code: six digit cells, paste/backspace support, displayed phone number, 30-second resend timer, validation and Verify action.
-4. Home: navy greeting/header/avatar; white next-installment card with amount, due date, progress and How to pay; phone/status card; recent payments; Home/Payments/Plan/Profile bottom navigation. Secondary destinations use explicit demo placeholders; payment help uses fake retailer instructions.
+4. Home: navy greeting/header/avatar; white next-installment card with amount, due date, progress and How to pay; phone/status card; recent payments; Home/Payments/Plan/Profile bottom navigation. Payments and Plan reuse the sample records, and Profile shows a sample identity. Payment help explains how the demo differs from real payments.
 
 Use specified brand colors, Inter typography, rounded cards, minimum 48dp pill buttons and touch targets. Support scrolling, keyboard/system insets, narrow devices, font scaling, accessible labels and contrast. Proposed first batch includes English/Urdu strings for these screens so the language control works, with RTL checks.
 
@@ -54,3 +54,20 @@ Commit each milestone separately; report changed files, review targets, commands
 ## How to release
 
 On `customer-app`, increment customer versions, commit and push; both customer workflows run. After successful validation, tag that commit `customer-v<versionName>` and push only that tag. Download customer APK artifacts; the signed APK is also published to `android/qist-customer.apk` in the existing R2 bucket. Never use locker `v*` tags or its R2 object path.
+
+## Test the demo
+
+Run `./gradlew :customer:installDebug` with a connected Android device, or download the customer debug APK from Actions. Enter any ten-digit sample number starting with `3`, then enter `123456`. The debug and release builds use different signing certificates, so Android may require uninstalling the debug customer app before switching to the signed release. The locker has its own package ID.
+
+## Verification record
+
+- Customer branch pushes ran both customer workflows. The screen commit's debug job built and uploaded its APK. The signed release workflow verifies the APK with `apksigner` before publishing to the customer R2 object. See [customer Actions runs](https://github.com/ubaidbadar/qist-android-locker/actions?query=branch%3Acustomer-app).
+- The branch diff contains no locker module files or existing locker workflows. Both locker workflows previously passed on the baseline commit.
+- YAML parsing and push filter checks passed locally. Local Android builds, emulator and device checks were unavailable in this environment. The `customer-v*` filters were checked statically and still need a live tag push.
+
+From an authenticated clone, after checking out the desired customer commit:
+
+```bash
+git tag customer-v0.1.0
+git push origin refs/tags/customer-v0.1.0
+```
