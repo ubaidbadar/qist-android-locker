@@ -2,6 +2,8 @@ package pk.qist.device.customer
 
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -64,8 +66,19 @@ internal fun Dashboard(
 
     val tabs = listOf(copy("Home", "گھر"), copy("Payments", "ادائیگیاں"), copy("Plan", "منصوبہ"), copy("Profile", "پروفائل"))
     val icons = listOf(R.drawable.tab_home, R.drawable.tab_payments, R.drawable.tab_plan, R.drawable.tab_profile)
+    val home = tab == CustomerTab.Home
+    val window = LocalActivity.current?.window
+    DisposableEffect(window, home) {
+        val controller = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        controller?.isAppearanceLightStatusBars = !home
+        onDispose { controller?.isAppearanceLightStatusBars = true }
+    }
+
     Scaffold(
         containerColor = Canvas,
+        topBar = {
+            Spacer(Modifier.fillMaxWidth().background(if (home) Navy else Canvas).statusBarsPadding())
+        },
         bottomBar = {
             NavigationBar(containerColor = Color.White) {
                 CustomerTab.entries.forEachIndexed { index, item ->
