@@ -63,9 +63,7 @@ internal fun Dashboard(
                                 Text(copy("Assalam o Alaikum", "السلام علیکم"), color = Muted)
                                 Text(data.name, color = Color.White, style = MaterialTheme.typography.headlineMedium)
                             }
-                            Box(Modifier.size(44.dp).background(DeepSurface, CircleShape), contentAlignment = Alignment.Center) {
-                                Text("D", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                            }
+                            HomeNotificationsButton()
                         }
                         InstallmentCard(data, onHelp)
                         Panel {
@@ -149,5 +147,46 @@ private fun PaymentsCard(payments: List<PaymentSample>, onViewAll: (() -> Unit)?
                 Text(copy("Rs. ${payment.amount}", "روپے ${payment.amount}"), color = Color(0xFF08674D), style = MaterialTheme.typography.titleMedium)
             }
         }
+    }
+}
+
+@Composable
+private fun HomeNotificationsButton() {
+    var open by rememberSaveable { mutableStateOf(false) }
+    var unread by rememberSaveable { mutableStateOf(true) }
+    val label = copy("Notifications", "اطلاعات")
+
+    FilledIconButton(
+        onClick = {
+            open = true
+            unread = false
+        },
+        modifier = Modifier.size(48.dp),
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = DeepSurface,
+            contentColor = Color.White,
+        ),
+    ) {
+        Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+            Icon(painterResource(R.drawable.detail_bell), contentDescription = label)
+            if (unread) {
+                Box(
+                    Modifier.align(Alignment.TopEnd).offset(x = 1.dp, y = (-1).dp)
+                        .size(11.dp).background(DeepSurface, RoundedCornerShape(4.dp))
+                        .padding(1.dp).background(Cyan, RoundedCornerShape(3.dp)),
+                )
+            }
+        }
+    }
+
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(label) },
+            text = { Text(copy("Check your plan for upcoming installments.", "آنے والی اقساط کے لیے اپنا منصوبہ دیکھیں۔")) },
+            confirmButton = {
+                TextButton(onClick = { open = false }) { Text(copy("Close", "بند کریں")) }
+            },
+        )
     }
 }
