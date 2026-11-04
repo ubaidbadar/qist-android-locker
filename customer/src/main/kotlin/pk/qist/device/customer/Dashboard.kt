@@ -15,6 +15,7 @@ import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -34,6 +35,27 @@ internal fun Dashboard(
     onLanguage: () -> Unit,
     onLogout: () -> Unit,
 ) {
+    val prefs = LocalContext.current.getSharedPreferences("customer_notifications", 0)
+    var allowed by remember { mutableStateOf(prefs.getBoolean("enabled", false)) }
+    var showPrompt by rememberSaveable { mutableStateOf(!prefs.contains("enabled")) }
+    var inbox by rememberSaveable { mutableStateOf(false) }
+    var unread by rememberSaveable { mutableIntStateOf(3) }
+
+    fun setNotifications(enabled: Boolean) {
+        allowed = enabled
+        prefs.edit().putBoolean("enabled", enabled).apply()
+        showPrompt = false
+    }
+
+    BackHandler(inbox) { inbox = false }
+    if (inbox) {
+        NotificationInbox(data, unread, { inbox = false }, { unread = 0 }) { bit ->
+            unread = unread and bit.inv()
+        }
+        return
+    }
+    if (showPrompt) NotificationPrompt({ setNotifications(true) }, { setNotifications(false) })
+
     val tabs = listOf(copy("Home", "گھر"), copy("Payments", "ادائیگیاں"), copy("Plan", "منصوبہ"), copy("Profile", "پروفائل"))
     val icons = listOf(R.drawable.tab_home, R.drawable.tab_payments, R.drawable.tab_plan, R.drawable.tab_profile)
     Scaffold(
@@ -63,7 +85,7 @@ internal fun Dashboard(
                                 Text(copy("Assalam o Alaikum", "السلام علیکم"), color = Muted)
                                 Text(data.name, color = Color.White, style = MaterialTheme.typography.headlineMedium)
                             }
-                            HomeNotificationsButton()
+                            HomeNotificationsButton(unread != 0) { inbox = true }
                         }
                         InstallmentCard(data, onHelp)
                         Panel {
@@ -92,7 +114,7 @@ internal fun Dashboard(
                     when (tab) {
                         CustomerTab.Payments -> PaymentHistory(data)
                         CustomerTab.Plan -> PlanDetails(data)
-                        CustomerTab.Profile -> CustomerProfile(data, phone, onLanguage, onLogout)
+                        CustomerTab.Profile -> CustomerProfile(data, phone, onLanguage, onLogout, allowed, ::setNotifications)
                         CustomerTab.Home -> Unit
                     }
                 }
@@ -151,42 +173,17 @@ private fun PaymentsCard(payments: List<PaymentSample>, onViewAll: (() -> Unit)?
 }
 
 @Composable
-private fun HomeNotificationsButton() {
-    var open by rememberSaveable { mutableStateOf(false) }
-    var unread by rememberSaveable { mutableStateOf(true) }
-    val label = copy("Notifications", "اطلاعات")
-
+private fun HomeNotificationsButton(unread: Boolean, onClick: () -> Unit) {
     FilledIconButton(
-        onClick = {
-            open = true
-            unread = false
-        },
+        onClick = onClick,
         modifier = Modifier.size(48.dp),
-        colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = DeepSurface,
-            contentColor = Color.White,
-        ),
+        colors = IconButtonDefaults.filledIconButtonColors(containerColor = DeepSurface, contentColor = Color.White),
     ) {
         Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
-            Icon(painterResource(R.drawable.detail_bell), contentDescription = label)
+            Icon(painterResource(R.drawable.detail_bell), contentDescription = copy("Notifications", "اطلاعات"))
             if (unread) {
-                Box(
-                    Modifier.align(Alignment.TopEnd).offset(x = 1.dp, y = (-1).dp)
-                        .size(11.dp).background(DeepSurface, RoundedCornerShape(4.dp))
-                        .padding(1.dp).background(Cyan, RoundedCornerShape(3.dp)),
-                )
+                Box(Modifier.align(Alignment.TopEnd).size(10.dp).background(Cyan, RoundedCornerShape(3.dp)))
             }
         }
-    }
-
-    if (open) {
-        AlertDialog(
-            onDismissRequest = { open = false },
-            title = { Text(label) },
-            text = { Text(copy("Check your plan for upcoming installments.", "آنے والی اقساط کے لیے اپنا منصوبہ دیکھیں۔")) },
-            confirmButton = {
-                TextButton(onClick = { open = false }) { Text(copy("Close", "بند کریں")) }
-            },
-        )
     }
 }

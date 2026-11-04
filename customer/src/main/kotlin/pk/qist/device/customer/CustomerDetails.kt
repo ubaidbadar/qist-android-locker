@@ -91,8 +91,7 @@ internal fun PlanDetails(data: DashboardSample) {
 }
 
 @Composable
-internal fun CustomerProfile(data: DashboardSample, phone: String, onLanguage: () -> Unit, onLogout: () -> Unit) {
-    var notifications by rememberSaveable { mutableStateOf(true) }
+internal fun CustomerProfile(data: DashboardSample, phone: String, onLanguage: () -> Unit, onLogout: () -> Unit, notifications: Boolean, onNotifications: (Boolean) -> Unit) {
     var dialog by rememberSaveable { mutableStateOf("") }
     val language = copy("English", "اردو")
     Panel {
@@ -126,7 +125,7 @@ internal fun CustomerProfile(data: DashboardSample, phone: String, onLanguage: (
         }
         HorizontalDivider(color = Divider)
         SettingsRow(copy("Notifications", "اطلاعات"), R.drawable.detail_bell) {
-            Switch(checked = notifications, onCheckedChange = { notifications = it })
+            Switch(checked = notifications, onCheckedChange = onNotifications)
         }
         HorizontalDivider(color = Divider)
         SettingsRow(copy("Help and support", "مدد اور معاونت"), R.drawable.detail_help, onClick = { dialog = "help" }) { Chevron() }
