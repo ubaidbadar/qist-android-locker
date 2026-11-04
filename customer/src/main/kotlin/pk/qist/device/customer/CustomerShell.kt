@@ -90,7 +90,20 @@ internal fun CustomerShell() {
                 if (error) Text(copy("Enter the demo code 123456.", "ڈیمو کوڈ 123456 درج کریں۔"), color = MaterialTheme.colorScheme.error)
                 Resend(deadline, ::requestCode)
             }
-            CustomerRoute.Home -> Dashboard(repository.dashboard(), tab, { tab = it }, { paymentHelp = true })
+            CustomerRoute.Home -> Dashboard(
+                repository.dashboard(), tab, { tab = it }, { paymentHelp = true },
+                phone = phone,
+                onLanguage = { urdu = !urdu },
+                onLogout = {
+                    phone = ""
+                    code = ""
+                    error = false
+                    deadline = 0L
+                    paymentHelp = false
+                    tab = CustomerTab.Home
+                    route = CustomerRoute.Welcome
+                },
+            )
         }
         if (paymentHelp) {
             AlertDialog(

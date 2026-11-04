@@ -30,6 +30,9 @@ internal fun Dashboard(
     tab: CustomerTab,
     onTab: (CustomerTab) -> Unit,
     onHelp: () -> Unit,
+    phone: String,
+    onLanguage: () -> Unit,
+    onLogout: () -> Unit,
 ) {
     val tabs = listOf(copy("Home", "گھر"), copy("Payments", "ادائیگیاں"), copy("Plan", "منصوبہ"), copy("Profile", "پروفائل"))
     val icons = listOf(R.drawable.tab_home, R.drawable.tab_payments, R.drawable.tab_plan, R.drawable.tab_profile)
@@ -87,14 +90,11 @@ internal fun Dashboard(
                 }
             } else {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(tabs[tab.ordinal], style = MaterialTheme.typography.headlineMedium)
+                    Text(if (tab == CustomerTab.Plan) copy("My plan", "میرا منصوبہ") else tabs[tab.ordinal], style = MaterialTheme.typography.headlineMedium)
                     when (tab) {
-                        CustomerTab.Payments -> PaymentsCard(data.payments)
-                        CustomerTab.Plan -> InstallmentCard(data, onHelp)
-                        CustomerTab.Profile -> Panel {
-                            Text(data.name, style = MaterialTheme.typography.titleMedium)
-                            Text(copy("Sample profile", "نمونہ پروفائل"))
-                        }
+                        CustomerTab.Payments -> PaymentHistory(data)
+                        CustomerTab.Plan -> PlanDetails(data)
+                        CustomerTab.Profile -> CustomerProfile(data, phone, onLanguage, onLogout)
                         CustomerTab.Home -> Unit
                     }
                 }
@@ -104,8 +104,8 @@ internal fun Dashboard(
 }
 
 @Composable
-private fun Panel(content: @Composable ColumnScope.() -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(22.dp)) {
+internal fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Surface(modifier = modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(22.dp)) {
         Column(Modifier.padding(20.dp), content = content)
     }
 }
