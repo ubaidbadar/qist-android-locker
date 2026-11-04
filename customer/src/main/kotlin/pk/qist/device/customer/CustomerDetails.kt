@@ -26,8 +26,7 @@ private fun money(amount: Int): String {
 }
 
 @Composable
-internal fun PaymentHistory(data: DashboardSample) {
-    var selected by rememberSaveable { mutableIntStateOf(0) }
+internal fun PaymentHistory(data: DashboardSample, onReceipt: (PaymentSample) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Panel(Modifier.weight(1f)) {
             Caption(copy("Total paid", "کل ادا شدہ"))
@@ -47,15 +46,9 @@ internal fun PaymentHistory(data: DashboardSample) {
                 subtitle = "${payment.date} · ${copy(payment.method, "نقد")}",
                 value = copy("Rs. ${payment.amount}", "روپے ${payment.amount}"),
                 icon = R.drawable.detail_check, tint = PaidGreen, background = PaidBackground,
-                valueColor = PaidGreen, onClick = { selected = payment.number },
+                valueColor = PaidGreen, onClick = { onReceipt(payment) },
             )
         }
-    }
-    data.payments.firstOrNull { it.number == selected }?.let { payment ->
-        DetailDialog(
-            copy("Installment ${payment.number}", "قسط ${payment.number}"),
-            copy("Rs. ${payment.amount} · ${payment.date} · ${payment.method}", "روپے ${payment.amount} · ${payment.date} · نقد"),
-        ) { selected = 0 }
     }
 }
 

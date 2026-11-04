@@ -66,6 +66,14 @@ internal fun Dashboard(
 
     val tabs = listOf(copy("Home", "گھر"), copy("Payments", "ادائیگیاں"), copy("Plan", "منصوبہ"), copy("Profile", "پروفائل"))
     val icons = listOf(R.drawable.tab_home, R.drawable.tab_payments, R.drawable.tab_plan, R.drawable.tab_profile)
+    var receiptNumber by rememberSaveable { mutableIntStateOf(0) }
+    val receipt = data.payments.firstOrNull { it.number == receiptNumber }
+    BackHandler(receipt != null) { receiptNumber = 0 }
+    if (receipt != null) {
+        CustomerReceipt(data, receipt) { receiptNumber = 0 }
+        return
+    }
+
     val home = tab == CustomerTab.Home
     val window = LocalActivity.current?.window
     DisposableEffect(window, home) {
@@ -131,7 +139,7 @@ internal fun Dashboard(
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(if (tab == CustomerTab.Plan) copy("My plan", "میرا منصوبہ") else tabs[tab.ordinal], style = MaterialTheme.typography.headlineMedium)
                     when (tab) {
-                        CustomerTab.Payments -> PaymentHistory(data)
+                        CustomerTab.Payments -> PaymentHistory(data) { receiptNumber = it.number }
                         CustomerTab.Plan -> PlanDetails(data)
                         CustomerTab.Profile -> CustomerProfile(data, phone, onLanguage, onLogout, allowed, ::setNotifications) { profilePage = it }
                         CustomerTab.Home -> Unit

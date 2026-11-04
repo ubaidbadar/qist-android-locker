@@ -15,6 +15,7 @@ import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -24,7 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import kotlinx.coroutines.delay
 
-internal enum class CustomerRoute { Welcome, Phone, Verify, Home }
+internal enum class CustomerRoute { Welcome, Phone, Verify, Consent, Home }
 internal enum class CustomerTab { Home, Payments, Plan, Profile }
 
 private val LocalUrdu = compositionLocalOf { false }
@@ -42,6 +43,8 @@ internal fun CustomerShell() {
     var error by rememberSaveable { mutableStateOf(false) }
     var deadline by rememberSaveable { mutableLongStateOf(0L) }
     var paymentHelp by rememberSaveable { mutableStateOf(false) }
+    val consent = LocalContext.current.getSharedPreferences("customer_privacy", 0)
+    var consentPolicy by rememberSaveable { mutableStateOf(false) }
     val repository: CustomerRepository = DemoCustomerRepository
 
     fun back() {
@@ -57,6 +60,13 @@ internal fun CustomerShell() {
 
     BackHandler(route == CustomerRoute.Phone || route == CustomerRoute.Verify, onBack = ::back)
     BackHandler(route == CustomerRoute.Home && tab != CustomerTab.Home) { tab = CustomerTab.Home }
+    BackHandler(route == CustomerRoute.Consent) {
+        if (consentPolicy) consentPolicy = false else {
+            phone = ""
+            route = CustomerRoute.Welcome
+        }
+    }
+    BackHandler(paymentHelp) { paymentHelp = false }
     CompositionLocalProvider(
         LocalUrdu provides urdu,
         LocalLayoutDirection provides if (urdu) LayoutDirection.Rtl else LayoutDirection.Ltr,
@@ -82,7 +92,7 @@ internal fun CustomerShell() {
                     if (repository.verify(code)) {
                         tab = CustomerTab.Home
                         code = ""
-                        route = CustomerRoute.Home
+                        route = if (consent.getBoolean("accepted", false)) CustomerRoute.Home else CustomerRoute.Consent
                     } else error = true
                 },
             ) {
@@ -90,7 +100,24 @@ internal fun CustomerShell() {
                 if (error) Text(copy("Enter the demo code 123456.", "ڈیمو کوڈ 123456 درج کریں۔"), color = MaterialTheme.colorScheme.error)
                 Resend(deadline, ::requestCode)
             }
-            CustomerRoute.Home -> Dashboard(
+            CustomerRoute.Consent -> if (consentPolicy) {
+                ProfileInformation(repository.dashboard(), privacy = true) { consentPolicy = false }
+            } else {
+                PrivacyConsent(
+                    onPolicy = { consentPolicy = true },
+                    onAgree = {
+                        consent.edit().putBoolean("accepted", true).apply()
+                        route = CustomerRoute.Home
+                    },
+                    onDecline = {
+                        phone = ""
+                        route = CustomerRoute.Welcome
+                    },
+                )
+            }
+            CustomerRoute.Home -> if (paymentHelp) {
+                HowToPay(repository.dashboard()) { paymentHelp = false }
+            } else Dashboard(
                 repository.dashboard(), tab, { tab = it }, { paymentHelp = true },
                 phone = phone,
                 onLanguage = { urdu = !urdu },
@@ -103,14 +130,6 @@ internal fun CustomerShell() {
                     tab = CustomerTab.Home
                     route = CustomerRoute.Welcome
                 },
-            )
-        }
-        if (paymentHelp) {
-            AlertDialog(
-                onDismissRequest = { paymentHelp = false },
-                title = { Text(copy("How to pay", "ادائیگی کیسے کریں")) },
-                text = { Text(copy("In a real plan, your retailer provides payment instructions. This demo does not accept payments.", "اصل منصوبے کی ادائیگی کی ہدایات دکاندار دیتا ہے۔ اس ڈیمو میں ادائیگی نہیں ہوتی۔")) },
-                confirmButton = { TextButton(onClick = { paymentHelp = false }) { Text(copy("Close", "بند کریں")) } },
             )
         }
     }
