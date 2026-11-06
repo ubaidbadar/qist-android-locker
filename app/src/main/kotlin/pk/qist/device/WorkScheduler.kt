@@ -11,6 +11,12 @@ interface WorkScheduler {
     /** One extra check-in as soon as there is a network (app opened, phone rebooted, just enrolled). */
     fun checkInNow()
 
+    /** Optional customer app work must never run in the enrollment job or compete with QR setup. */
+    fun scheduleCustomerApp(wifiOnly: Boolean, delayMillis: Long, replace: Boolean = false)
+
+    /** Continue a healthy partial download without treating useful progress as a network failure. */
+    fun continueCustomerApp(wifiOnly: Boolean)
+
     /** Stop all check-ins: the phone is released or its enrolment was revoked. */
     fun cancelCheckIns()
 }

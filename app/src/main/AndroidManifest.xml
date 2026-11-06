@@ -6,6 +6,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <queries>
+        <package android:name="pk.qist.customer" />
+    </queries>
+
     <!-- No launcher entry on purpose: the customer has nothing to open. Android adds no stand-in icon for a
          Device Owner app, so the app shows only in Settings > Apps, where it cannot be uninstalled.
          Nothing in this app may be copied off the phone by a backup: the credential would travel with it. -->
@@ -30,6 +34,10 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name=".customer.CustomerInstallReceiver"
+            android:exported="false" />
 
         <!-- The lock screen. Enters kiosk mode by itself when the app is on the lock-task allow-list. -->
         <activity

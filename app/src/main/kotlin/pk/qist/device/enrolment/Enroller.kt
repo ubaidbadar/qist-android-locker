@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import kotlinx.coroutines.flow.first
 import pk.qist.device.AppInfo
 import pk.qist.device.WorkScheduler
+import pk.qist.device.customer.CustomerAppState
 import pk.qist.device.data.ApiResult
 import pk.qist.device.data.DeviceApi
 import pk.qist.device.data.DeviceState
@@ -40,13 +41,18 @@ class Enroller(
     suspend fun enrol(): EnrolOutcome {
         val pending = store.data.first().enrolment as? Enrolment.Pending ?: return EnrolOutcome.NothingToDo
         val pushToken = store.data.first().pushToken.takeIf { it.isNotBlank() }
-        val request = EnrollRequest(pending.enrolToken, appInfo.appVersion, appInfo.androidVersion, pushToken = pushToken)
+        val request =
+            EnrollRequest(pending.enrolToken, appInfo.appVersion, appInfo.androidVersion, pushToken = pushToken)
         return when (val result = api.enroll(request)) {
             is ApiResult.Success -> {
                 val credential = result.value
                 store.updateData {
                     it.copy(
                         enrolment = Enrolment.Enrolled(credential.deviceId, credential.token),
+                        customerApp = CustomerAppState(
+                            notBefore =
+                                System.currentTimeMillis() + CustomerAppState.SETUP_DELAY_MILLIS
+                        ),
                         checkInSeconds = credential.checkInSeconds
                     )
                 }

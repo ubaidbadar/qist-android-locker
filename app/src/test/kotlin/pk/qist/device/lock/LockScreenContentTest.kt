@@ -1,5 +1,6 @@
 package pk.qist.device.lock
 
+import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -11,10 +12,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
 import pk.qist.device.ui.theme.QistTheme
 
 /** Runs on the JVM through Robolectric, so it needs no phone or emulator. */
 @RunWith(AndroidJUnit4::class)
+@Config(application = Application::class)
 class LockScreenContentTest {
     @get:Rule
     val compose = createComposeRule()

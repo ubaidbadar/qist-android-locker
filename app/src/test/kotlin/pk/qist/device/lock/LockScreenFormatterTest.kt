@@ -58,7 +58,9 @@ class LockScreenFormatterTest {
         assertNull(LockScreenFormatter.format(screen, now = Date(68_399_999)).overdueDays)
         assertEquals(1, LockScreenFormatter.format(screen, now = Date(68_400_000)).overdueDays)
         assertNull(LockScreenFormatter.format(screen.copy(amountDue = 0), now = Date(68_400_000)).overdueDays)
-        assertNull(LockScreenFormatter.format(screen.copy(nextDueDate = "1970-02-31"), now = Date(68_400_000)).overdueDays)
+        assertNull(
+            LockScreenFormatter.format(screen.copy(nextDueDate = "1970-02-31"), now = Date(68_400_000)).overdueDays
+        )
     }
 
     @Test
