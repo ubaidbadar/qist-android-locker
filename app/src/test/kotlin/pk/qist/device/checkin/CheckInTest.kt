@@ -4,6 +4,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import pk.qist.device.AppInfo
+import pk.qist.device.customer.CustomerAppRelease
+import pk.qist.device.customer.CustomerAppReport
+import pk.qist.device.customer.CustomerAppState
 import pk.qist.device.data.AckRequest
 import pk.qist.device.data.AckRequest.Outcome.APPLIED
 import pk.qist.device.data.AckRequest.Outcome.FAILED
@@ -21,6 +24,37 @@ import pk.qist.device.fakes.InMemoryStore
 import pk.qist.device.fakes.RecordingScheduler
 
 class CheckInTest {
+    @Test
+    fun `customer download is deferred while a lock is still handled and acknowledged`() = runTest {
+        val release =
+            CustomerAppRelease(
+                CustomerAppState.PACKAGE,
+                2,
+                24,
+                "https://example.com/customer.apk",
+                10,
+                "a".repeat(64),
+                "b".repeat(64)
+            )
+        val store = InMemoryStore(
+            enrolled.copy(
+                customerApp = CustomerAppState(
+                    notBefore =
+                        System.currentTimeMillis() + 900_000
+                )
+            )
+        )
+        api.checkInResult =
+            ApiResult.Success(
+                CheckInResponse(LockState.UNLOCKED, LockScreen(), listOf(CommandDto("lock1", "lock")), 900, release)
+            )
+
+        assertEquals(CheckInOutcome.Done, checkIn(store).run())
+        assertEquals(LockState.LOCKED, store.value.lockState)
+        assertEquals(listOf("lock1" to AckRequest(APPLIED)), api.acks)
+        assertEquals(listOf("customer app wifi=true delayed=true"), scheduler.requests)
+        assertEquals(CustomerAppReport(), store.value.customerApp.report)
+    }
     private val api = FakeDeviceApi()
     private val policy = FakeDevicePolicy()
     private val scheduler = RecordingScheduler()

@@ -78,42 +78,44 @@ fun LockScreenContent(
 @Composable
 private fun LockHeader(screen: LockScreenUi) {
     val badge = painterResource(R.drawable.qist_badge)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Image(painter = badge, contentDescription = null, modifier = Modifier.size(32.dp))
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-    }
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Image(painter = badge, contentDescription = null, modifier = Modifier.size(104.dp))
-        Text(
-            text = stringResource(R.string.lock_title),
-            modifier = Modifier.padding(top = 8.dp).semantics { heading() },
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        val description = MaterialTheme.typography.bodyLarge
-        val muted = MaterialTheme.colorScheme.onSurfaceVariant
-        Text(
-            text = if (screen.amountDue == null) screen.message else stringResource(R.string.lock_payment_message),
-            textAlign = TextAlign.Center,
-            color = muted,
-            style = description
-        )
-        if (screen.amountDue != null) {
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Image(painter = badge, contentDescription = null, modifier = Modifier.size(32.dp))
             Text(
-                text = stringResource(R.string.lock_payment_message_urdu),
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Image(painter = badge, contentDescription = null, modifier = Modifier.size(104.dp))
+            Text(
+                text = stringResource(R.string.lock_title),
+                modifier = Modifier.padding(top = 8.dp).semantics { heading() },
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            val description = MaterialTheme.typography.bodyLarge
+            val muted = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                text = if (screen.amountDue == null) screen.message else stringResource(R.string.lock_payment_message),
                 textAlign = TextAlign.Center,
                 color = muted,
-                style = description.copy(textDirection = TextDirection.Rtl)
+                style = description
             )
+            if (screen.amountDue != null) {
+                Text(
+                    text = stringResource(R.string.lock_payment_message_urdu),
+                    textAlign = TextAlign.Center,
+                    color = muted,
+                    style = description.copy(textDirection = TextDirection.Rtl)
+                )
+            }
         }
     }
 }
