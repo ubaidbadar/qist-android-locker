@@ -3,6 +3,7 @@ package pk.qist.device.ui.theme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 private val Ink = Color(0xFF0B1F4B)
 private val Blue = Color(0xFF2F3FE0)
@@ -52,3 +53,13 @@ val QistLockColors = darkColorScheme(
     outline = Color(0xFF758CC7),
     outlineVariant = Color(0xFF30446E)
 )
+
+/** Shared dimensions for the lock payment cards and details sheet. */
+object QistLockLayout {
+    val Padding = 20.dp
+    val Gap = 12.dp
+    val SectionGap = 16.dp
+    val CardRadius = 22.dp
+    val TouchTarget = 48.dp
+    val SheetMaxHeight = 680.dp
+}

@@ -15,6 +15,9 @@ object LockScreenFormatter {
     private const val FALLBACK_MESSAGE = "This phone is locked. Please contact the shop that sold it to unlock it."
 
     fun format(screen: LockScreen, now: Date = Date()) = LockScreenUi(
+        retailerName = screen.retailerName.ifBlank { screen.branchName }.ifBlank { null },
+        branchAddress = screen.branchAddress,
+        paymentMethods = screen.paymentMethods.filter { it.enabled },
         message = screen.message.ifBlank { FALLBACK_MESSAGE },
         amountDue = screen.amountDue.takeIf { it > 0 }?.let(::rupees),
         nextDueDate = screen.nextDueDate?.let(::date),

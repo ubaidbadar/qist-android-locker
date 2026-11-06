@@ -12,6 +12,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import pk.qist.device.ui.theme.QistTheme
+import pk.qist.device.data.RetailerPaymentMethod
 
 /** Runs on the JVM through Robolectric, so it needs no phone or emulator. */
 @RunWith(AndroidJUnit4::class)
@@ -32,6 +33,17 @@ class LockScreenContentTest {
         compose.setContent {
             QistTheme { LockScreenContent(screen = screen, onCallBranch = onCall, onEmergencyCall = onEmergency) }
         }
+
+    @Test
+    fun `payment details open inside the lock screen and close without an external app`() {
+        show(full.copy(paymentMethods = listOf(RetailerPaymentMethod("wallet", "easypaisa", accountTitle = "Test Retailer", accountNumber = "03001234567"))))
+        compose.onNodeWithText("View details").performScrollTo().performClick()
+        compose.onNodeWithText("Payment methods").assertIsDisplayed()
+        compose.onNodeWithText("03001234567").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Copy").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Close").performScrollTo().performClick()
+        compose.onNodeWithText("Payment methods").assertDoesNotExist()
+    }
 
     @Test
     fun `shows the message, amount, due date and branch`() {
