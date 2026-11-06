@@ -8,6 +8,7 @@
 
     <queries>
         <package android:name="pk.qist.customer" />
+
         <package android:name="com.android.vending" />
     </queries>
 
@@ -35,6 +36,10 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name=".customer.CustomerInstallReceiver"
+            android:exported="false" />
 
         <!-- The lock screen. Enters kiosk mode by itself when the app is on the lock-task allow-list. -->
         <activity
