@@ -18,3 +18,11 @@ Implemented a separate unmetered-by-default customer installation job, persisten
 Debug APK assembly and all 59 Android JVM/Robolectric tests passed. Full Android lint and ktlint are checked alongside assembly. A pre-existing Compose header emitted two roots; it now has one Column preserving the existing 24dp spacing. Existing UI tests are isolated from Firebase startup with a plain test Application, retaining all assertions. The release metadata tool was exercised on a real disposable signed APK and rejected an unsigned APK.
 
 Physical Device Owner enrollment/silent installation is still required before production rollout. No production signing key, customer APK release configuration, merge, or deployment was changed. Local runtime needs proxy settings for Robolectric artifact downloads; no proxy configuration is committed.
+
+## Skill-guided efficiency review — 6 November 2026
+
+Scope: retain the existing architecture, UI, dependencies, enrollment, device policies and signing. Reduce redundant encrypted state updates, temporary command collections, installer scheduling and APK request round trips. Keep partial-file recovery, range/size validation and bounded worker execution intact.
+
+Implemented one atomic response update for screen/schedule/release metadata, direct command iteration, and no installer scheduling for unchanged permanently blocked releases. Corrected release metadata still unblocks installation. APK requests stream the remaining range with one reusable 16 KiB buffer; shorter valid responses remain supported. Calls are bounded by the remaining four-minute run budget plus 60 seconds so healthy slow streams can yield without first hitting the download client's 180-second default call timeout.
+
+Added regression coverage for atomic metadata updates, blocked/corrected releases, single-request large transfers and shorter server ranges. `git diff --check` passed. Android build, JVM tests, lint and ktlint could not run: Gradle 9.8.0 with Java 25 failed resolving the repository's existing Android Gradle Plugin 9.4.1; SDK Manager also could not find the configured Android 37 platform. No dependency/SDK downgrades or build-setting changes were made. Prior verification above describes earlier work, not this change. Device behavior and performance timings remain unmeasured.

@@ -79,6 +79,67 @@ class CheckInTest {
     }
 
     @Test
+    fun `check-in persists screen schedule and release metadata atomically`() = runTest {
+        val release = customerRelease()
+        val screen = LockScreen(message = "Updated payment details")
+        val store = InMemoryStore(enrolled)
+        api.checkInResult = ApiResult.Success(CheckInResponse(LockState.UNLOCKED, screen, emptyList(), 1800, release))
+
+        assertEquals(CheckInOutcome.Done, checkIn(store).run())
+
+        val saved = store.updates.single()
+        assertEquals(screen, saved.lockScreen)
+        assertEquals(1800L, saved.checkInSeconds)
+        assertEquals(release, saved.customerApp.release)
+        assertEquals(true, saved.customerApp.notBefore > 0)
+    }
+
+    @Test
+    fun `a permanently blocked APK is not scheduled again by unchanged check-ins`() = runTest {
+        val release = customerRelease()
+        val report = CustomerAppReport("failed", detailCode = "invalid_release")
+        val app = CustomerAppState(release = release, blockedSha256 = release.sha256, report = report)
+        val store = InMemoryStore(enrolled.copy(customerApp = app))
+        api.checkInResult = ApiResult.Success(
+            CheckInResponse(LockState.UNLOCKED, LockScreen(), emptyList(), 900, release)
+        )
+
+        assertEquals(CheckInOutcome.Done, checkIn(store).run())
+
+        assertEquals(emptyList<String>(), scheduler.requests)
+        assertEquals(report, store.value.customerApp.report)
+        assertEquals(release.sha256, store.value.customerApp.blockedSha256)
+    }
+
+    @Test
+    fun `corrected release metadata unblocks and reschedules installation`() = runTest {
+        val release = customerRelease()
+        val app = CustomerAppState(release = release, blockedSha256 = release.sha256)
+        val store = InMemoryStore(enrolled.copy(customerApp = app))
+        // A corrected certificate must unblock even when the APK digest stays the same.
+        val corrected = release.copy(signingCertificateSha256 = "c".repeat(64))
+        api.checkInResult = ApiResult.Success(
+            CheckInResponse(LockState.UNLOCKED, LockScreen(), emptyList(), 900, corrected)
+        )
+
+        assertEquals(CheckInOutcome.Done, checkIn(store).run())
+
+        assertEquals(null, store.value.customerApp.blockedSha256)
+        assertEquals(corrected, store.value.customerApp.release)
+        assertEquals(listOf("customer app wifi=true delayed=true"), scheduler.requests)
+    }
+
+    private fun customerRelease() = CustomerAppRelease(
+        CustomerAppState.PACKAGE,
+        2,
+        24,
+        "https://example.com/customer.apk",
+        10,
+        "a".repeat(64),
+        "b".repeat(64)
+    )
+
+    @Test
     fun `a phone that is not enrolled does not call the server`() = runTest {
         assertEquals(CheckInOutcome.NotEnrolled, checkIn(InMemoryStore()).run())
         assertEquals(0, api.checkIns.size)

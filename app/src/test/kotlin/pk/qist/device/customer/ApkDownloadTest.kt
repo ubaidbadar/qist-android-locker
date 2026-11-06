@@ -57,6 +57,36 @@ class ApkDownloadTest {
     }
 
     @Test
+    fun `a large APK streams in one range request`() = runTest {
+        val body = "x".repeat(768 * 1024)
+        server.enqueue(
+            MockResponse.Builder().code(206)
+                .addHeader("Content-Range", "bytes 0-${body.lastIndex}/${body.length}")
+                .body(body).build()
+        )
+        val file = file("")
+
+        assertTrue(download.download(release().copy(sizeBytes = body.length.toLong()), file))
+
+        assertEquals(body, file.readText())
+        assertEquals(1, server.requestCount)
+        assertEquals("bytes=0-${body.lastIndex}", server.takeRequest().headers["Range"])
+    }
+
+    @Test
+    fun `a server returning shorter ranges continues from the saved offset`() = runTest {
+        server.enqueue(MockResponse.Builder().code(206).addHeader("Content-Range", "bytes 0-2/6").body("abc").build())
+        server.enqueue(MockResponse.Builder().code(206).addHeader("Content-Range", "bytes 3-5/6").body("def").build())
+        val file = file("")
+
+        assertTrue(download.download(release(), file))
+
+        assertEquals("abcdef", file.readText())
+        assertEquals("bytes=0-5", server.takeRequest().headers["Range"])
+        assertEquals("bytes=3-5", server.takeRequest().headers["Range"])
+    }
+
+    @Test
     fun `a server ignoring ranges replaces rather than appends to a partial file`() = runTest {
         server.enqueue(MockResponse.Builder().body("abcdef").build())
         val file = file("abc")
