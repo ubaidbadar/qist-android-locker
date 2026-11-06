@@ -34,7 +34,9 @@ class DpmDevicePolicy(
 
     override fun protect() = asOwner {
         applyProtections()
-        if (context.getSystemService(ActivityManager::class.java).lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE) {
+        if (context.getSystemService(ActivityManager::class.java).lockTaskModeState !=
+            ActivityManager.LOCK_TASK_MODE_NONE
+        ) {
             dpm.setLockTaskPackages(admin, lockTaskPackages())
         }
     }

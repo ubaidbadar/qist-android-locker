@@ -67,14 +67,18 @@ fun LockActions(
                 .heightIn(min = TouchTarget)
         ) {
             Text(
-                text = stringResource(if (customerAppInstalled) R.string.lock_open_customer_app else R.string.lock_get_customer_app),
+                text = stringResource(
+                    if (customerAppInstalled) R.string.lock_open_customer_app else R.string.lock_get_customer_app
+                ),
                 color = MaterialTheme.colorScheme.onBackground,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
         }
         Text(
-            text = stringResource(if (customerAppInstalled) R.string.lock_customer_app_installed else R.string.lock_customer_app_hint),
+            text = stringResource(
+                if (customerAppInstalled) R.string.lock_customer_app_installed else R.string.lock_customer_app_hint
+            ),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall
         )

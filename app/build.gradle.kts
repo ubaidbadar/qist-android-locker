@@ -1,3 +1,6 @@
+import java.io.File
+import java.util.Base64
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,9 +9,50 @@ plugins {
     alias(libs.plugins.ktlint)
 }
 
-/** Reads a build setting from -P or gradle.properties; fails the build if it is missing. */
-fun setting(name: String): String =
-    providers.gradleProperty(name).orNull ?: error("Missing Gradle property '$name' (see android/gradle.properties)")
+/** Parses .env files into key-value pairs (workspace root, project root, and app module). */
+fun loadDotEnv(): Map<String, String> {
+    val env = mutableMapOf<String, String>()
+    val candidateFiles = listOf(
+        rootProject.file("../.env"),
+        rootProject.file(".env"),
+        project.file(".env"),
+        rootProject.file(".env.local"),
+        project.file(".env.local")
+    )
+    for (candidate in candidateFiles) {
+        if (candidate.isFile) {
+            candidate.forEachLine { rawLine ->
+                val line = rawLine.trim()
+                if (line.isNotEmpty() && !line.startsWith("#") && line.contains("=")) {
+                    val parts = line.split("=", limit = 2)
+                    val key = parts[0].trim()
+                    var value = parts[1].trim()
+                    if ((value.startsWith("\"") && value.endsWith("\"")) ||
+                        (value.startsWith("'") && value.endsWith("'"))
+                    ) {
+                        value = value.substring(1, value.length - 1)
+                    }
+                    env[key] = value
+                }
+            }
+        }
+    }
+    return env
+}
+
+val dotEnv = loadDotEnv()
+
+/** Looks up value across System.getenv, .env, and Gradle properties. */
+fun resolveEnv(envKey: String, gradlePropName: String? = null): String? = System.getenv(envKey)
+    ?: dotEnv[envKey]
+    ?: (gradlePropName?.let { providers.gradleProperty(it).orNull })
+    ?: providers.gradleProperty(envKey).orNull
+
+/** Reads a build setting from env (process/dotenv), -P, or gradle.properties; fails the build if it is missing. */
+fun setting(name: String, envKey: String? = null): String = (envKey?.let { resolveEnv(it, name) })
+    ?: resolveEnv(name)
+    ?: providers.gradleProperty(name).orNull
+    ?: error("Missing Gradle property '$name' (see android/gradle.properties or .env)")
 
 android {
     namespace = "pk.qist.device"
@@ -26,30 +70,61 @@ android {
 
     signingConfigs {
         create("ciRelease") {
-            val storePath = providers.gradleProperty("qist.signing.storeFile").orNull
-            if (storePath != null) {
-                storeFile = file(storePath)
-                storePassword = providers.gradleProperty("qist.signing.storePassword").orNull
-                keyAlias = providers.gradleProperty("qist.signing.keyAlias").orNull
-                keyPassword = providers.gradleProperty("qist.signing.keyPassword").orNull
+            val keystoreBase64 = resolveEnv("ANDROID_KEYSTORE_BASE64")
+            val explicitStoreFile = resolveEnv("ANDROID_KEYSTORE_FILE", "qist.signing.storeFile")
+
+            if (!keystoreBase64.isNullOrBlank()) {
+                val decodedKeystore = layout.buildDirectory.file("keystore/release.jks").get().asFile
+                if (!decodedKeystore.exists() || decodedKeystore.length() == 0L) {
+                    decodedKeystore.parentFile.mkdirs()
+                    decodedKeystore.writeBytes(Base64.getDecoder().decode(keystoreBase64.trim()))
+                }
+                storeFile = decodedKeystore
+            } else if (!explicitStoreFile.isNullOrBlank()) {
+                storeFile = file(explicitStoreFile)
+            } else {
+                val candidateKeystores = listOf(
+                    rootProject.file("../qist-release.jks"),
+                    rootProject.file("qist-release.jks"),
+                    project.file("qist-release.jks")
+                )
+                val found = candidateKeystores.find { it.isFile }
+                if (found != null) {
+                    storeFile = found
+                }
             }
+
+            storePassword = resolveEnv("ANDROID_KEYSTORE_PASSWORD", "qist.signing.storePassword")
+            keyAlias = resolveEnv("ANDROID_KEY_ALIAS", "qist.signing.keyAlias")
+            keyPassword = resolveEnv("ANDROID_KEY_PASSWORD", "qist.signing.keyPassword")
         }
     }
 
     buildTypes {
         debug {
-            buildConfigField("String", "API_URL", "\"${setting("qist.apiUrl.debug")}\"")
+            val debugUrl = resolveEnv("API_URL_DEBUG", "qist.apiUrl.debug")
+                ?: setting("qist.apiUrl.debug")
+            buildConfigField("String", "API_URL", "\"$debugUrl\"")
             // On the emulator adb must keep working, so debug builds leave USB debugging alone.
             buildConfigField("boolean", "BLOCK_USB_DEBUGGING", "false")
         }
         release {
-            if (providers.gradleProperty("qist.signing.storeFile").isPresent) {
-                signingConfig = signingConfigs.getByName("ciRelease")
+            val ciRelease = signingConfigs.getByName("ciRelease")
+            if (ciRelease.storeFile?.isFile == true && !ciRelease.storePassword.isNullOrBlank()) {
+                signingConfig = ciRelease
             }
-            val releaseUrl = setting("qist.apiUrl.release")
-            require(releaseUrl.startsWith("https://")) { "qist.apiUrl.release must use https" }
+
+            val releaseUrl = resolveEnv("API_URL", "qist.apiUrl.release")
+                ?: setting("qist.apiUrl.release")
+            require(releaseUrl.startsWith("https://")) { "qist.apiUrl.release or API_URL must use https" }
             buildConfigField("String", "API_URL", "\"$releaseUrl\"")
             buildConfigField("boolean", "BLOCK_USB_DEBUGGING", "true")
+
+            val signatureChecksum = resolveEnv("DEVICE_APP_SIGNATURE_CHECKSUM")
+            if (!signatureChecksum.isNullOrBlank()) {
+                buildConfigField("String", "DEVICE_APP_SIGNATURE_CHECKSUM", "\"$signatureChecksum\"")
+            }
+
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

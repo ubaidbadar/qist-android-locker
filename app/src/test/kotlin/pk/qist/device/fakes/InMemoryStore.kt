@@ -17,11 +17,10 @@ class InMemoryStore(initial: DeviceState = DeviceState()) : DataStore<DeviceStat
 
     val value: DeviceState get() = state.value
 
-    override suspend fun updateData(transform: suspend (t: DeviceState) -> DeviceState): DeviceState =
-        mutex.withLock {
-            transform(state.value).also {
-                updates += it
-                state.value = it
-            }
+    override suspend fun updateData(transform: suspend (t: DeviceState) -> DeviceState): DeviceState = mutex.withLock {
+        transform(state.value).also {
+            updates += it
+            state.value = it
         }
+    }
 }

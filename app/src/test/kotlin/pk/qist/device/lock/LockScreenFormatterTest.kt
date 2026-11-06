@@ -12,7 +12,8 @@ import pk.qist.device.data.RetailerPaymentMethod
 class LockScreenFormatterTest {
     @Test
     fun `payment instructions survive formatting and disabled methods are hidden`() {
-        val wallet = RetailerPaymentMethod("wallet", "jazzcash", accountTitle = "Retailer", accountNumber = "03001234567")
+        val wallet =
+            RetailerPaymentMethod("wallet", "jazzcash", accountTitle = "Retailer", accountNumber = "03001234567")
         val screen = LockScreen(
             retailerName = "Retailer",
             branchAddress = "Main Road",
@@ -64,7 +65,10 @@ class LockScreenFormatterTest {
             now = Date(0)
         )
 
-        assertEquals(LockScreenUi("Please pay", "Rs 15,000", "12 Oct 2026", "Saddar", "0300 1234567", retailerName = "Saddar"), ui)
+        assertEquals(
+            LockScreenUi("Please pay", "Rs 15,000", "12 Oct 2026", "Saddar", "0300 1234567", retailerName = "Saddar"),
+            ui
+        )
     }
 
     @Test

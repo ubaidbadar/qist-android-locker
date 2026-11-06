@@ -59,7 +59,10 @@ internal fun PaymentMethodsSummary(screen: LockScreenUi) {
                 }
             }
             if (screen.paymentMethods.isEmpty()) {
-                Text(stringResource(R.string.lock_no_payment_methods), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.lock_no_payment_methods),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             } else {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(QistLockLayout.Gap)) {
                     screen.paymentMethods.distinctBy { it.kind }.forEach { method ->
@@ -94,11 +97,20 @@ private fun PaymentMethodsSheet(screen: LockScreenUi, retailer: String, onDismis
                     verticalArrangement = Arrangement.spacedBy(QistLockLayout.SectionGap)
                 ) {
                     Text(stringResource(R.string.lock_payment_methods), style = MaterialTheme.typography.titleLarge)
-                    Text(stringResource(R.string.lock_pay_retailer, retailer), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.lock_pay_retailer, retailer),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     if (screen.paymentMethods.isEmpty()) Text(stringResource(R.string.lock_no_payment_methods))
                     screen.paymentMethods.forEach { method -> PaymentMethodCard(method, screen.branchAddress) }
-                    Text(stringResource(R.string.lock_direct_payment_notice), style = MaterialTheme.typography.bodyMedium)
-                    Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = QistLockLayout.TouchTarget)) {
+                    Text(
+                        stringResource(R.string.lock_direct_payment_notice),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = QistLockLayout.TouchTarget)
+                    ) {
                         Text(stringResource(R.string.lock_close))
                     }
                 }
