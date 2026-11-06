@@ -11,11 +11,17 @@ import pk.qist.device.data.DeviceState
 class InMemoryStore(initial: DeviceState = DeviceState()) : DataStore<DeviceState> {
     private val state = MutableStateFlow(initial)
     private val mutex = Mutex()
+    val updates = mutableListOf<DeviceState>()
 
     override val data: StateFlow<DeviceState> = state
 
     val value: DeviceState get() = state.value
 
     override suspend fun updateData(transform: suspend (t: DeviceState) -> DeviceState): DeviceState =
-        mutex.withLock { transform(state.value).also { state.value = it } }
+        mutex.withLock {
+            transform(state.value).also {
+                updates += it
+                state.value = it
+            }
+        }
 }

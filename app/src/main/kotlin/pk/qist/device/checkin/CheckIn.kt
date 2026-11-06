@@ -59,16 +59,14 @@ class CheckIn(
     }
 
     private suspend fun apply(credential: String, before: DeviceState, response: CheckInResponse): CheckInOutcome {
-        store.updateData { it.copy(lockScreen = response.lockScreen, checkInSeconds = response.checkInSeconds) }
-        if (response.checkInSeconds != before.checkInSeconds) scheduler.scheduleCheckIns(response.checkInSeconds)
-        policy.protect()
-
-        // Only store metadata here. APK download/installation is a separate delayed job, after commands finish.
+        // Save one coherent response in one encrypted update. Downloads remain a separate job after commands.
         store.updateData {
             val previous = it.customerApp
             val release = response.customerAppRelease
             val changed = previous.release != release
             it.copy(
+                lockScreen = response.lockScreen,
+                checkInSeconds = response.checkInSeconds,
                 customerApp = previous.copy(
                     release = release,
                     notBefore = previous.notBefore.takeIf { time -> time > 0 }
@@ -86,14 +84,16 @@ class CheckIn(
                 )
             )
         }
+        if (response.checkInSeconds != before.checkInSeconds) scheduler.scheduleCheckIns(response.checkInSeconds)
+        policy.protect()
 
         if (response.commands.isEmpty()) {
             reconcile(before.lockState, response.lockState)
             scheduleCustomerApp(before.customerApp.release != response.customerAppRelease)
             return CheckInOutcome.Done
         }
-        for (command in response.commands.map { it.toCommand() }) {
-            val outcome = carryOut(credential, command)
+        for (command in response.commands) {
+            val outcome = carryOut(credential, command.toCommand())
             if (outcome != CheckInOutcome.Done) return outcome
         }
         scheduleCustomerApp(before.customerApp.release != response.customerAppRelease)
@@ -105,6 +105,7 @@ class CheckIn(
         val app = state.customerApp
         val release = app.release ?: return
         if (state.enrolment !is Enrolment.Enrolled) return
+        if (app.blockedSha256 == release.sha256) return
         scheduler.scheduleCustomerApp(release.wifiOnly, app.notBefore - System.currentTimeMillis(), replace)
     }
 

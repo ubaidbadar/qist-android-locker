@@ -3,6 +3,7 @@ package pk.qist.device.customer
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import okhttp3.OkHttpClient
@@ -13,16 +14,23 @@ class ApkDownload(private val client: OkHttpClient, private val runNanos: Long =
     suspend fun download(release: CustomerAppRelease, file: File): Boolean {
         if (file.length() > release.sizeBytes) file.delete()
         val deadline = System.nanoTime() + runNanos
+        val buffer = ByteArray(16 * 1024)
         while (file.length() < release.sizeBytes) {
             currentCoroutineContext().ensureActive()
             if (System.nanoTime() >= deadline) return false
             val offset = file.length()
-            val end = minOf(release.sizeBytes - 1, offset + CHUNK_BYTES - 1)
+            // Stream the remaining APK instead of paying a round trip for every 256 KiB.
+            // Shorter valid ranges are still accepted; interrupted transfers resume at the saved file length.
+            val end = release.sizeBytes - 1
             val request = Request.Builder().url(release.apkUrl)
                 .header("Accept-Encoding", "identity")
                 .header("Range", "bytes=$offset-$end")
                 .build()
-            client.newCall(request).execute().use { response ->
+            val call = client.newCall(request)
+            // Give the loop time to yield normally, while bounding even redirects or a stalled response.
+            val remainingNanos = (deadline - System.nanoTime()).coerceAtLeast(1)
+            call.timeout().timeout(remainingNanos + TIMEOUT_GRACE_NANOS, TimeUnit.NANOSECONDS)
+            call.execute().use { response ->
                 val start: Long
                 val expected: Long
                 when (response.code) {
@@ -50,7 +58,6 @@ class ApkDownload(private val client: OkHttpClient, private val runNanos: Long =
                     if (start == 0L) output.setLength(0)
                     output.seek(start)
                     response.body.byteStream().use { input ->
-                        val buffer = ByteArray(16 * 1024)
                         var remaining = expected
                         while (remaining > 0) {
                             currentCoroutineContext().ensureActive()
@@ -82,8 +89,8 @@ class ApkDownload(private val client: OkHttpClient, private val runNanos: Long =
     }
 
     private companion object {
-        const val CHUNK_BYTES = 256L * 1024
         const val RUN_NANOS = 4L * 60 * 1_000_000_000
+        const val TIMEOUT_GRACE_NANOS = 60L * 1_000_000_000
         val RANGE = Regex("bytes (\\d+)-(\\d+)/(\\d+)")
     }
 }
