@@ -8,6 +8,8 @@
 
     <queries>
         <package android:name="pk.qist.customer" />
+
+        <package android:name="com.android.vending" />
     </queries>
 
     <!-- No launcher entry on purpose: the customer has nothing to open. Android adds no stand-in icon for a

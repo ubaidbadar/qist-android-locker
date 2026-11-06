@@ -35,7 +35,9 @@ fun LockScreenContent(
     screen: LockScreenUi,
     onCallBranch: (phone: String) -> Unit,
     onEmergencyCall: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    customerAppInstalled: Boolean = false,
+    onOpenCustomerApp: () -> Unit = {}
 ) {
     MaterialTheme(colorScheme = QistLockColors) {
         Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -53,11 +55,14 @@ fun LockScreenContent(
                 ) {
                     LockHeader(screen)
                     DueSummary(screen)
+                    PaymentMethodsSummary(screen)
                     LockActions(
                         branchName = screen.branchName,
                         branchPhone = screen.branchPhone,
                         onCallBranch = onCallBranch,
                         onEmergencyCall = onEmergencyCall,
+                        customerAppInstalled = customerAppInstalled,
+                        onOpenCustomerApp = onOpenCustomerApp,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                     if (screen.amountDue != null) {

@@ -12,5 +12,18 @@ data class LockScreen(
     val nextDueDate: String? = null,
     val branchName: String = "",
     val branchPhone: String = "",
+    val retailerName: String = "",
+    val branchAddress: String = "",
+    val paymentMethods: List<RetailerPaymentMethod> = emptyList(),
     val message: String = ""
+)
+
+@Serializable
+data class RetailerPaymentMethod(
+    val id: String,
+    val kind: String,
+    val enabled: Boolean = true,
+    val accountTitle: String = "",
+    val accountNumber: String = "",
+    val bankName: String = ""
 )

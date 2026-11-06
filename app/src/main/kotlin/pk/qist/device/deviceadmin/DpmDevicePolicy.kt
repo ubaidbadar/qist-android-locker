@@ -1,5 +1,6 @@
 package pk.qist.device.deviceadmin
 
+import android.app.ActivityManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -31,12 +32,17 @@ class DpmDevicePolicy(
         if (blockUsbDebugging) add(UserManager.DISALLOW_DEBUGGING_FEATURES)
     }
 
-    override fun protect() = asOwner { applyProtections() }
+    override fun protect() = asOwner {
+        applyProtections()
+        if (context.getSystemService(ActivityManager::class.java).lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE) {
+            dpm.setLockTaskPackages(admin, lockTaskPackages())
+        }
+    }
 
     override fun lock() = asOwner {
         applyProtections()
         restrictNetworkChanges()
-        // Only these apps may run while locked: ours, and the dialer so emergency calls and "Call branch" work.
+        // Keep the lock active while allowing the Qist customer app, its Play listing, and calls.
         dpm.setLockTaskPackages(admin, lockTaskPackages())
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             // The power menu stays, for its Emergency button; status bar, Home and Recents are hidden.
@@ -106,7 +112,7 @@ class DpmDevicePolicy(
 
     private fun lockTaskPackages(): Array<String> {
         val dialer = context.getSystemService(TelecomManager::class.java)?.defaultDialerPackage
-        return listOfNotNull(packageName, dialer, SYSTEM_PHONE).distinct().toTypedArray()
+        return listOfNotNull(packageName, dialer, SYSTEM_PHONE, CUSTOMER_APP, PLAY_STORE).distinct().toTypedArray()
     }
 
     private fun homeFilter() = IntentFilter(Intent.ACTION_MAIN).apply {
@@ -127,6 +133,8 @@ class DpmDevicePolicy(
 
     private companion object {
         /** Hosts the emergency dialer on most phones. */
+        const val CUSTOMER_APP = "pk.qist.customer"
+        const val PLAY_STORE = "com.android.vending"
         const val SYSTEM_PHONE = "com.android.phone"
         const val NOT_OWNER = "app is not device owner"
         const val REFUSED = "android refused the policy"

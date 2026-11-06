@@ -11,6 +11,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +26,8 @@ import pk.qist.device.ui.theme.QistTheme
  * Kept small on purpose: it is the first screen after a reboot of a locked phone.
  */
 class LockActivity : ComponentActivity() {
+    private var customerAppInstalled by mutableStateOf(false)
+
     private val viewModel: LockViewModel by viewModels { LockViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,7 +46,9 @@ class LockActivity : ComponentActivity() {
                     LockScreenContent(
                         screen = locked.screen,
                         onCallBranch = { phone -> openDialer(phone) },
-                        onEmergencyCall = { openDialer() }
+                        onEmergencyCall = { openDialer() },
+                        customerAppInstalled = customerAppInstalled,
+                        onOpenCustomerApp = { openCustomerApp(customerAppInstalled) }
                     )
                 }
             }
@@ -55,6 +61,7 @@ class LockActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        customerAppInstalled = packageManager.getLaunchIntentForPackage(CUSTOMER_APP_PACKAGE) != null
         viewModel.refresh()
     }
 

@@ -20,4 +20,23 @@
     <string name="lock_call_branch_description">Call %1$s at %2$s</string>
     <string name="lock_emergency_call">Emergency call</string>
 
+    <string name="lock_open_customer_app">Open Qist app</string>
+    <string name="lock_get_customer_app">Get the Qist app</string>
+    <string name="lock_customer_app_hint">Not installed yet? Download it to track your plan and payments.</string>
+    <string name="lock_customer_app_installed">Track your plan and payments in Qist.</string>
+    <string name="lock_customer_app_unavailable">Qist or Google Play could not open. Contact your retailer. Your phone remains locked.</string>
+    <string name="lock_payment_methods">Payment methods</string>
+    <string name="lock_pay_retailer">Pay %1$s directly using any of these.</string>
+    <string name="lock_your_retailer">your retailer</string>
+    <string name="lock_view_payment_details">View details</string>
+    <string name="lock_cash">Cash at shop</string>
+    <string name="lock_easypaisa">Easypaisa</string>
+    <string name="lock_jazzcash">JazzCash</string>
+    <string name="lock_bank">Bank transfer</string>
+    <string name="lock_copy">Copy</string>
+    <string name="lock_copied">Account number copied</string>
+    <string name="lock_close">Close</string>
+    <string name="lock_no_payment_methods">Contact your retailer for payment instructions.</string>
+    <string name="lock_no_shop_address">Contact your retailer for the shop address.</string>
+    <string name="lock_direct_payment_notice">Qist does not process payments. Pay your retailer directly and keep your receipt.</string>
 </resources>

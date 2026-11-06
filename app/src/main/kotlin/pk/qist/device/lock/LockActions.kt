@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -31,7 +32,9 @@ fun LockActions(
     branchPhone: String?,
     onCallBranch: (phone: String) -> Unit,
     onEmergencyCall: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    customerAppInstalled: Boolean = false,
+    onOpenCustomerApp: () -> Unit = {}
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (branchPhone != null) {
@@ -57,18 +60,26 @@ fun LockActions(
             }
         }
         OutlinedButton(
-            onClick = onEmergencyCall,
+            onClick = onOpenCustomerApp,
             border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = TouchTarget)
         ) {
             Text(
-                text = stringResource(R.string.lock_emergency_call),
+                text = stringResource(if (customerAppInstalled) R.string.lock_open_customer_app else R.string.lock_get_customer_app),
                 color = MaterialTheme.colorScheme.onBackground,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+        }
+        Text(
+            text = stringResource(if (customerAppInstalled) R.string.lock_customer_app_installed else R.string.lock_customer_app_hint),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
+        TextButton(onClick = onEmergencyCall, modifier = Modifier.fillMaxWidth().heightIn(min = TouchTarget)) {
+            Text(text = stringResource(R.string.lock_emergency_call), color = MaterialTheme.colorScheme.onBackground)
         }
     }
 }

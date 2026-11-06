@@ -7,8 +7,23 @@ import org.junit.Test
 import pk.qist.device.data.DeviceState
 import pk.qist.device.data.LockScreen
 import pk.qist.device.data.LockState
+import pk.qist.device.data.RetailerPaymentMethod
 
 class LockScreenFormatterTest {
+    @Test
+    fun `payment instructions survive formatting and disabled methods are hidden`() {
+        val wallet = RetailerPaymentMethod("wallet", "jazzcash", accountTitle = "Retailer", accountNumber = "03001234567")
+        val screen = LockScreen(
+            retailerName = "Retailer",
+            branchAddress = "Main Road",
+            paymentMethods = listOf(wallet, RetailerPaymentMethod("cash", "cash", enabled = false))
+        )
+        val ui = LockScreenFormatter.format(screen)
+        assertEquals("Retailer", ui.retailerName)
+        assertEquals("Main Road", ui.branchAddress)
+        assertEquals(listOf(wallet), ui.paymentMethods)
+    }
+
     @Test
     fun `rupees group thousands and drop zero paisa`() {
         assertEquals("Rs 0", LockScreenFormatter.rupees(0))
@@ -49,7 +64,7 @@ class LockScreenFormatterTest {
             now = Date(0)
         )
 
-        assertEquals(LockScreenUi("Please pay", "Rs 15,000", "12 Oct 2026", "Saddar", "0300 1234567"), ui)
+        assertEquals(LockScreenUi("Please pay", "Rs 15,000", "12 Oct 2026", "Saddar", "0300 1234567", retailerName = "Saddar"), ui)
     }
 
     @Test
