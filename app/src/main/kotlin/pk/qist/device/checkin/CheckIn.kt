@@ -6,8 +6,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import pk.qist.device.AppInfo
 import pk.qist.device.WorkScheduler
-import pk.qist.device.customer.CustomerAppReport
-import pk.qist.device.customer.CustomerAppState
 import pk.qist.device.data.AckRequest
 import pk.qist.device.data.ApiResult
 import pk.qist.device.data.CheckInRequest
@@ -48,8 +46,7 @@ class CheckIn(
                 state.lockState,
                 state.pushToken.takeIf {
                     it.isNotBlank()
-                },
-                state.customerApp.report
+                }
             )
         when (val result = api.checkIn(enrolled.credential, request)) {
             is ApiResult.Success -> apply(enrolled.credential, state, result.value)
@@ -59,54 +56,22 @@ class CheckIn(
     }
 
     private suspend fun apply(credential: String, before: DeviceState, response: CheckInResponse): CheckInOutcome {
-        // Save one coherent response in one encrypted update. Downloads remain a separate job after commands.
+        // Save the screen and schedule together in one encrypted update.
         store.updateData {
-            val previous = it.customerApp
-            val release = response.customerAppRelease
-            val changed = previous.release != release
-            it.copy(
-                lockScreen = response.lockScreen,
-                checkInSeconds = response.checkInSeconds,
-                customerApp = previous.copy(
-                    release = release,
-                    notBefore = previous.notBefore.takeIf { time -> time > 0 }
-                        ?: (System.currentTimeMillis() + CustomerAppState.SETUP_DELAY_MILLIS),
-                    report = if (release ==
-                        null
-                    ) {
-                        CustomerAppReport("not_configured")
-                    } else if (changed) {
-                        CustomerAppReport()
-                    } else {
-                        previous.report
-                    },
-                    blockedSha256 = if (changed) null else previous.blockedSha256
-                )
-            )
+            it.copy(lockScreen = response.lockScreen, checkInSeconds = response.checkInSeconds)
         }
         if (response.checkInSeconds != before.checkInSeconds) scheduler.scheduleCheckIns(response.checkInSeconds)
         policy.protect()
 
         if (response.commands.isEmpty()) {
             reconcile(before.lockState, response.lockState)
-            scheduleCustomerApp(before.customerApp.release != response.customerAppRelease)
             return CheckInOutcome.Done
         }
         for (command in response.commands) {
             val outcome = carryOut(credential, command.toCommand())
             if (outcome != CheckInOutcome.Done) return outcome
         }
-        scheduleCustomerApp(before.customerApp.release != response.customerAppRelease)
         return CheckInOutcome.Done
-    }
-
-    private suspend fun scheduleCustomerApp(replace: Boolean) {
-        val state = store.data.first()
-        val app = state.customerApp
-        val release = app.release ?: return
-        if (state.enrolment !is Enrolment.Enrolled) return
-        if (app.blockedSha256 == release.sha256) return
-        scheduler.scheduleCustomerApp(release.wifiOnly, app.notBefore - System.currentTimeMillis(), replace)
     }
 
     private suspend fun carryOut(credential: String, command: Command): CheckInOutcome {

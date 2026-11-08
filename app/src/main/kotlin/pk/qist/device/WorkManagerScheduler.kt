@@ -5,14 +5,12 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 import pk.qist.device.checkin.CheckInWorker
-import pk.qist.device.customer.CustomerAppWorker
 import pk.qist.device.enrolment.EnrolWorker
 
 /**
@@ -51,42 +49,12 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
     }
 
     override fun cancelCheckIns() {
-        workManager().cancelUniqueWork(CUSTOMER_APP)
         workManager().cancelUniqueWork(PERIODIC)
         workManager().cancelUniqueWork(NOW)
     }
 
-    override fun scheduleCustomerApp(wifiOnly: Boolean, delayMillis: Long, replace: Boolean) {
-        workManager().enqueueUniqueWork(
-            CUSTOMER_APP,
-            if (replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
-            customerWork(wifiOnly, delayMillis)
-        )
-    }
-
-    override fun continueCustomerApp(wifiOnly: Boolean) {
-        workManager().enqueueUniqueWork(
-            CUSTOMER_APP,
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
-            customerWork(wifiOnly, BACKOFF_SECONDS * 1000)
-        )
-    }
-
-    private fun customerWork(wifiOnly: Boolean, delayMillis: Long): OneTimeWorkRequest {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
-            .setRequiresStorageNotLow(true)
-            .build()
-        return OneTimeWorkRequestBuilder<CustomerAppWorker>()
-            .setConstraints(constraints)
-            .setInitialDelay(maxOf(0, delayMillis), TimeUnit.MILLISECONDS)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
-            .build()
-    }
-
     private companion object {
         const val ENROL = "enrol"
-        const val CUSTOMER_APP = "customer-app-install"
         const val PERIODIC = "check-in"
         const val NOW = "check-in-now"
         const val BACKOFF_SECONDS = 30L

@@ -4,6 +4,13 @@ The small app that locks or unlocks a financed phone when the portal says so. It
 during phone setup by scanning the provisioning QR the portal shows for a sold phone. Not on Google Play: we host
 the APK ourselves. This folder is a separate Gradle project, not part of the bun workspaces.
 
+## Customer app
+
+The locker does not download, install, or update the customer app. The lock screen's existing button opens an
+installed Qist app or its Google Play listing when the customer taps it. QR provisioning installs only the locker.
+Old server installation metadata is ignored. Upgrading the locker cancels installation work queued by older versions.
+Already installed customer apps remain installed; an installation already committed to Android may still finish.
+
 ## Open and build
 
 - Open the `android/` folder in Android Studio (it uses its own bundled JDK; nothing else to install).

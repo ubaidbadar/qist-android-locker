@@ -1,28 +1,18 @@
+# Remove automatic customer app installation — 8 November 2026
 
+Removed the customer APK downloader, verifier, installer, worker, result receiver, release/report/state models,
+scheduling hooks, release-generation script, installer documentation and tests specific to the deleted feature.
+Enrollment and authenticated check-ins now handle only locker state, commands and push registration. Existing
+manual customer-app / Google Play navigation remains unchanged.
 
-## Deferred customer app installation — 6 November 2026
+On upgrade, app startup cancels the old unique installation work. Production JSON configuration ignores obsolete
+stored state and server metadata, preserving enrollment credentials and lock state. Regression tests cover these
+compatibility boundaries; the atomic screen/schedule test and lock/unlock/release tests remain.
 
-Scope: QR setup downloads only the locker. Customer app installation is a separate durable job, first eligible 15 minutes after enrollment, on unmetered connections by default. Enrollment and lock commands never wait for it. No fabricated customer web portal link.
+Verification: static reference/manifest checks and git diff --check passed. Android assembly, JVM tests, lint and
+ktlint could not run here: the environment has Java 17, no Android SDK or Gradle installation, and the GitHub
+connector cannot retrieve the binary Gradle wrapper JAR. The project requests Java 25 and Android SDK 37.
+GitHub Actions is unavailable and is not used for validation. No build settings or dependencies were changed.
 
-1. Add an optional validated customer release manifest delivered through existing authenticated check-ins; persist sanitized customer-app reports during existing check-ins. Existing devices and unset configuration remain compatible.
-2. Extend locker scheduling with unique delayed installation work. Resume HTTP Range downloads, validate package/version/checksum/signing certificate, then use public PackageInstaller sessions and an explicit result receiver. Reconcile sessions after restart; retry transient errors with backoff and surface permanent failures. Stop installation management after release/revocation.
-3. Show reported customer-app status separately from successful device enrollment in the existing portal components and tokens.
-4. Add targeted tests for manifest validation, range handling, retry/state behavior, enrollment independence, API authorization and portal labels. No extra release request is needed. Run available type, lint, build and test tasks; document SDK/device/network limitations.
-5. Prepare reviewable branches/PRs; do not deploy or merge to production during this implementation. Deployment requires a real approved APK and its signing information, which must never be invented.
-
-Use existing dependencies and current public APIs. No dependency migration, deprecated install intents, Accessibility automation, or changes to existing lock/release behavior.
-
-### Implementation and verification
-Implemented a separate unmetered-by-default customer installation job, persistent grace period, resumable 256 KiB ranges, validated artifacts and public PackageInstaller sessions. Healthy time-limited transfers continue without exponential failure backoff. Existing check-ins exchange release metadata/reports; no extra release endpoint or customer web portal was added.
-
-Debug APK assembly and all 59 Android JVM/Robolectric tests passed. Full Android lint and ktlint are checked alongside assembly. A pre-existing Compose header emitted two roots; it now has one Column preserving the existing 24dp spacing. Existing UI tests are isolated from Firebase startup with a plain test Application, retaining all assertions. The release metadata tool was exercised on a real disposable signed APK and rejected an unsigned APK.
-
-Physical Device Owner enrollment/silent installation is still required before production rollout. No production signing key, customer APK release configuration, merge, or deployment was changed. Local runtime needs proxy settings for Robolectric artifact downloads; no proxy configuration is committed.
-
-## Skill-guided efficiency review — 6 November 2026
-
-Scope: retain the existing architecture, UI, dependencies, enrollment, device policies and signing. Reduce redundant encrypted state updates, temporary command collections, installer scheduling and APK request round trips. Keep partial-file recovery, range/size validation and bounded worker execution intact.
-
-Implemented one atomic response update for screen/schedule/release metadata, direct command iteration, and no installer scheduling for unchanged permanently blocked releases. Corrected release metadata still unblocks installation. APK requests stream the remaining range with one reusable 16 KiB buffer; shorter valid responses remain supported. Calls are bounded by the remaining four-minute run budget plus 60 seconds so healthy slow streams can yield without first hitting the download client's 180-second default call timeout.
-
-Added regression coverage for atomic metadata updates, blocked/corrected releases, single-request large transfers and shorter server ranges. `git diff --check` passed. Android build, JVM tests, lint and ktlint could not run: Gradle 9.8.0 with Java 25 failed resolving the repository's existing Android Gradle Plugin 9.4.1; SDK Manager also could not find the configured Android 37 platform. No dependency/SDK downgrades or build-setting changes were made. Prior verification above describes earlier work, not this change. Device behavior and performance timings remain unmeasured.
+A new signed locker build must be installed on devices for this change to take effect. Existing customer apps
+are not uninstalled, and an installation already committed to Android can finish independently of the locker.

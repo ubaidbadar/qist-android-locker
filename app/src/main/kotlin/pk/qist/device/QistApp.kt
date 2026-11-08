@@ -2,6 +2,7 @@ package pk.qist.device
 
 import android.app.Application
 import android.content.Context
+import androidx.work.WorkManager
 import com.google.firebase.messaging.FirebaseMessaging
 import pk.qist.device.push.recordPushToken
 
@@ -11,6 +12,8 @@ class QistApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Cancel installation work persisted by older locker versions when upgrading.
+        WorkManager.getInstance(this).cancelUniqueWork("customer-app-install")
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token -> recordPushToken(token) }
     }
 }

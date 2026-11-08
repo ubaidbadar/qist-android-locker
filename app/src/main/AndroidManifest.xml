@@ -37,10 +37,6 @@
             </intent-filter>
         </service>
 
-        <receiver
-            android:name=".customer.CustomerInstallReceiver"
-            android:exported="false" />
-
         <!-- The lock screen. Enters kiosk mode by itself when the app is on the lock-task allow-list. -->
         <activity
             android:name=".lock.LockActivity"

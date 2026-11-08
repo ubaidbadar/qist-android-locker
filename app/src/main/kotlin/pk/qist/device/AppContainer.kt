@@ -17,8 +17,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import pk.qist.device.checkin.CheckIn
 import pk.qist.device.checkin.CommandRunner
-import pk.qist.device.customer.ApkDownload
-import pk.qist.device.customer.CustomerAppInstaller
 import pk.qist.device.data.DeviceApi
 import pk.qist.device.data.DeviceState
 import pk.qist.device.data.DeviceStateSerializer
@@ -78,14 +76,6 @@ class AppContainer(private val context: Context) {
     val scheduler: WorkScheduler by lazy { WorkManagerScheduler { WorkManager.getInstance(context) } }
 
     val enroller by lazy { Enroller(api, store, policy, scheduler, appInfo) }
-
-    val customerInstaller by lazy {
-        val downloads = httpClient.newBuilder()
-            .readTimeout(60, TimeUnit.SECONDS)
-            .callTimeout(180, TimeUnit.SECONDS)
-            .build()
-        CustomerAppInstaller(context, store, scheduler, ApkDownload(downloads), io)
-    }
 
     val checkIn by lazy { CheckIn(api, store, policy, CommandRunner(store, policy), scheduler, appInfo) }
 }

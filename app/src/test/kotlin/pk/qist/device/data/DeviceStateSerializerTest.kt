@@ -32,6 +32,25 @@ class DeviceStateSerializerTest {
     }
 
     @Test
+    fun `upgrade ignores old installation state and preserves enrollment and lock`() = runTest {
+        val state = DeviceState(
+            enrolment = Enrolment.Enrolled("d1", "d1.secret"),
+            lockState = LockState.LOCKED,
+            checkInSeconds = 1800
+        )
+        val json = Json { ignoreUnknownKeys = true }
+        val encoded = json.encodeToString(DeviceState.serializer(), state)
+        val legacy = encoded.dropLast(1) +
+            """, "customerApp":{"sessionId":12,"report":{"status":"installing"}}}"""
+        val bytes = reversing.seal(legacy.encodeToByteArray())
+        val upgraded = DeviceStateSerializer(reversing, json)
+
+        assertEquals(state, upgraded.readFrom(ByteArrayInputStream(bytes)))
+        val saved = ByteArrayOutputStream().also { upgraded.writeTo(state, it) }.toByteArray()
+        assertFalse(reversing.open(saved).decodeToString().contains("customerApp"))
+    }
+
+    @Test
     fun `the file on disk never holds the credential in plain text`() = runTest {
         val bytes = ByteArrayOutputStream()
             .also { serializer.writeTo(DeviceState(enrolment = Enrolment.Enrolled("d1", "d1.secret")), it) }

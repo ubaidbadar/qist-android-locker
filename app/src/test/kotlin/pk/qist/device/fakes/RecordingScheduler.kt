@@ -22,14 +22,6 @@ class RecordingScheduler(private val cancelStopsCaller: Boolean = false) : WorkS
         requests += "check in now"
     }
 
-    override fun scheduleCustomerApp(wifiOnly: Boolean, delayMillis: Long, replace: Boolean) {
-        requests += "customer app wifi=$wifiOnly delayed=${delayMillis > 0}"
-    }
-
-    override fun continueCustomerApp(wifiOnly: Boolean) {
-        requests += "continue customer app wifi=$wifiOnly"
-    }
-
     override fun cancelCheckIns() {
         requests += "cancel check-ins"
         if (cancelStopsCaller) throw CancellationException("check-in job cancelled")

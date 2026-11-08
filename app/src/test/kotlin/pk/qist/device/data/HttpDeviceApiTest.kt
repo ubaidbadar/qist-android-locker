@@ -9,6 +9,7 @@ import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -53,6 +54,21 @@ class HttpDeviceApiTest {
         assertEquals(listOf(CommandDto("c1", "lock")), response.commands)
         assertEquals(150_000L, response.lockScreen.amountDue)
         assertEquals("Bearer d1.secret", server.takeRequest().headers["Authorization"])
+    }
+
+    @Test
+    fun `old server installation metadata is ignored and no installation report is sent`() = runTest(dispatcher) {
+        val body = CHECK_IN_BODY.replace(
+            "\"commands\":",
+            """"customerAppRelease":{"url":"https://example.com/customer.apk"},"commands":"""
+        )
+        reply(200, body)
+
+        val result = api.checkIn("d1.secret", CheckInRequest("1", LockState.UNLOCKED))
+
+        val response = (result as ApiResult.Success).value
+        assertEquals(listOf(CommandDto("c1", "lock")), response.commands)
+        assertFalse(server.takeRequest().body?.utf8().orEmpty().contains("customerApp"))
     }
 
     @Test
