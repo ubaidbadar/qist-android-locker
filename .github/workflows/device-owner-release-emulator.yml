@@ -3,10 +3,19 @@ name: Device Owner release emulator (self-hosted Mac)
 on:
   workflow_dispatch:
     inputs:
-      avd_name:
-        description: Existing clean ARM64 AVD name created in Android Studio Device Manager
+      expected_api_level:
+        description: Android API level of the already-running clean ARM64 AVD
         required: true
-        default: Qist_API_36_ARM64
+        type: choice
+        options:
+          - '34'
+          - '35'
+          - '36'
+        default: '36'
+      emulator_serial:
+        description: Optional exact ADB emulator serial (for example emulator-5554)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -28,8 +37,8 @@ jobs:
 
       - name: Run isolated Android Device Owner release test
         env:
-          QIST_AVD_NAME: ${{ inputs.avd_name }}
-          QIST_EXPECTED_API_LEVEL: '36'
+          QIST_EXPECTED_API_LEVEL: ${{ inputs.expected_api_level }}
+          QIST_EMULATOR_SERIAL: ${{ inputs.emulator_serial }}
         run: |
           chmod +x scripts/qa/device-owner-release-macos.sh
           ./scripts/qa/device-owner-release-macos.sh
