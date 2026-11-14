@@ -128,5 +128,8 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.work.testing)
 
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+
     ktlintRuleset(libs.compose.rules.ktlint)
 }

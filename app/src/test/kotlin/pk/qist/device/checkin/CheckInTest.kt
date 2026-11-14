@@ -202,6 +202,20 @@ class CheckInTest {
     }
 
     @Test
+    fun `a failed Device Owner relinquish is currently ignored after server confirms release`() = runTest {
+        val store = InMemoryStore(enrolled)
+        policy.relinquishResult = PolicyResult.Failed("android refused the policy")
+        respond("c4" to "release")
+
+        assertEquals(CheckInOutcome.Released, checkIn(store).run())
+
+        // This captures the current production bug: release is marked final and polling stops despite failure.
+        assertEquals(listOf("protect", "release", "relinquish"), policy.calls)
+        assertEquals(Enrolment.Released, store.value.enrolment)
+        assertEquals(listOf("cancel check-ins"), scheduler.requests)
+    }
+
+    @Test
     fun `release completes even though stopping check-ins stops the running job`() = runTest {
         val store = InMemoryStore(enrolled)
         respond("c3" to "release")
