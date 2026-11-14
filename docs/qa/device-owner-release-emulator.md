@@ -35,8 +35,8 @@ In Android Studio Device Manager:
 
 1. Stop the QA AVD if it is already running.
 2. Open its three-dot menu and choose **Wipe Data**.
-3. Start the AVD and wait until Android finishes booting.
-4. Do not add a Google account. The test needs a clean device with no existing Device Owner.
+3. Start the AVD. When the Android Setup Wizard appears, leave it at the initial welcome/setup screen; do not complete setup or add a Google account.
+4. Wait until Android reports boot completion, but do not finish Setup Wizard. Device Owner provisioning is only allowed as part of device setup, before setup completes.
 5. Make sure this is the only running emulator. Physical phones may remain connected; the script will ignore them.
 
 Wiping the AVD is intentionally a visible Device Manager operation. The harness does not use deprecated AVD-management commands or silently wipe any device.
