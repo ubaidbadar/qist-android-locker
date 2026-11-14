@@ -60,7 +60,8 @@ class DpmDevicePolicy(
             dpm.setUninstallBlocked(admin, packageName, false)
 
             val allQistRestrictions = (restrictions + networkRestrictions()).distinct()
-            val restrictionsRemain = allQistRestrictions.any { dpm.getUserRestrictions(admin).getBoolean(it) }
+            val appliedRestrictions = dpm.getUserRestrictions(admin)
+            val restrictionsRemain = allQistRestrictions.any { appliedRestrictions.getBoolean(it) }
             val uninstallBlocked = dpm.isUninstallBlocked(admin, packageName)
             val lockTaskPackagesRemain = dpm.getLockTaskPackages(admin).isNotEmpty()
             val lockHomeEnabled =
