@@ -24,26 +24,39 @@ Use your Apple Silicon Mac (M2 Pro) and Android Studio.
 2. In Android Studio, open **Tools → Device Manager → Create Device**.
 3. Choose a Pixel phone profile.
 4. Download and select **Android 16 / API 36 / Google APIs / arm64-v8a**.
-5. Name the AVD exactly **Qist_API_36_ARM64**.
-6. Install the Android SDK platform required by this project (API 37), Android SDK Platform Tools and Android Emulator.
-7. Ensure the Android SDK path is ~/Library/Android/sdk, or export ANDROID_SDK_ROOT.
+5. Install the Android SDK platform required by this project (API 37) and Android SDK Platform Tools.
+6. Ensure the Android SDK path is ~/Library/Android/sdk, or export ANDROID_SDK_ROOT.
 
-Do not use a physical phone for this script. It deliberately wipes the selected AVD's data on every run so Device Owner provisioning starts from a clean device.
+Do not use a physical phone for this script. The script only accepts an ADB emulator serial and refuses to select a physical device.
+
+## Before every run
+
+In Android Studio Device Manager:
+
+1. Stop the QA AVD if it is already running.
+2. Open its three-dot menu and choose **Wipe Data**.
+3. Start the AVD and wait until Android finishes booting.
+4. Do not add a Google account. The test needs a clean device with no existing Device Owner.
+5. Make sure this is the only running emulator. Physical phones may remain connected; the script will ignore them.
+
+Wiping the AVD is intentionally a visible Device Manager operation. The harness does not use deprecated AVD-management commands or silently wipe any device.
 
 ## Run locally
 
-From the repository root, run:
+From the repository root, after the clean emulator has booted:
 
     chmod +x scripts/qa/device-owner-release-macos.sh
     ./scripts/qa/device-owner-release-macos.sh
 
-To run another AVD, set both its name and expected API level:
+The default expected system image is API 36. For another API level:
 
-    QIST_AVD_NAME=Qist_API_35_ARM64 QIST_EXPECTED_API_LEVEL=35 ./scripts/qa/device-owner-release-macos.sh
+    QIST_EXPECTED_API_LEVEL=35 ./scripts/qa/device-owner-release-macos.sh
 
-Create separate API 34 and 35 AVDs in Device Manager if you want to expand the matrix. Run one emulator at a time on a 16 GB Mac.
+If multiple emulators are online, select the exact QA emulator:
 
-The script refuses to start if another emulator is already running. It ignores connected physical devices and targets only the emulator it starts. It leaves the emulator open at the end for inspection. Evidence is written under build/reports/device-owner-release/.
+    QIST_EMULATOR_SERIAL=emulator-5554 ./scripts/qa/device-owner-release-macos.sh
+
+The script checks the actual API level and arm64-v8a ABI before installing anything. It refuses to continue if the AVD already has a Device Owner. Evidence is written under build/reports/device-owner-release/.
 
 ## Optional GitHub Actions on this Mac
 
@@ -52,7 +65,8 @@ The workflow is manual-only and uses a self-hosted macOS ARM64 runner. To enable
 1. Open the repository's **Settings → Actions → Runners → New self-hosted runner**.
 2. Select macOS and ARM64, then follow GitHub's displayed installation commands on this Mac.
 3. Keep the runner online in the user's logged-in macOS session and make sure Android SDK/JDK 17 are available to it.
-4. Run **Actions → Device Owner release emulator (self-hosted Mac) → Run workflow**.
+4. Before dispatching the workflow, wipe and start the clean AVD in Android Studio Device Manager.
+5. Run **Actions → Device Owner release emulator (self-hosted Mac) → Run workflow**.
 
 GitHub-hosted macOS ARM64 runners are not used for this workflow because GitHub documents that nested virtualization is unsupported there. The local Mac is the actual emulator host.
 
