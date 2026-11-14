@@ -4,7 +4,7 @@ sealed interface CheckInOutcome {
     /** Checked in and carried out every command (or left a failed acknowledgement for the next check-in). */
     data object Done : CheckInOutcome
 
-    /** No network or a server error; nothing changed on the phone. */
+    /** Network/server failure, or Android has not yet confirmed Device Owner removal; retry later. */
     data object RetryLater : CheckInOutcome
 
     /** Not enrolled (yet, or any more): there is nobody to check in with. */
