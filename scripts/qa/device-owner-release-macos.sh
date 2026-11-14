@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 PACKAGE_NAME="pk.qist.device"
 TEST_RUNNER="pk.qist.device.test/androidx.test.runner.AndroidJUnitRunner"
 TEST_CLASS="pk.qist.device.deviceadmin.DeviceOwnerReleaseTest"
-AVD_NAME="\${QIST_AVD_NAME:-Qist_API_36_ARM64}"
-EXPECTED_API="\${QIST_EXPECTED_API_LEVEL:-36}"
-SDK_ROOT="\${ANDROID_SDK_ROOT:-\${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
+AVD_NAME="${QIST_AVD_NAME:-Qist_API_36_ARM64}"
+EXPECTED_API="${QIST_EXPECTED_API_LEVEL:-36}"
+SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
 ADB="$SDK_ROOT/platform-tools/adb"
 EMULATOR="$SDK_ROOT/emulator/emulator"
 REPORT_DIR="$ROOT_DIR/build/reports/device-owner-release/$(date +%Y%m%d-%H%M%S)"
@@ -38,7 +38,7 @@ collect_diagnostics() {
     printf 'test_status=%s\n' "$TEST_STATUS"
     printf 'avd_name=%s\n' "$AVD_NAME"
     printf 'expected_api=%s\n' "$EXPECTED_API"
-    printf 'serial=%s\n' "\${SERIAL:-not-started}"
+    printf 'serial=%s\n' "${SERIAL:-not-started}"
     printf 'timestamp=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   } > "$REPORT_DIR/summary.txt"
 
@@ -106,7 +106,7 @@ set +e
 "$ADB" -s "$SERIAL" shell am instrument -w -r \
   -e class "$TEST_CLASS" \
   "$TEST_RUNNER" 2>&1 | tee "$REPORT_DIR/instrumentation.txt"
-TEST_STATUS=\${PIPESTATUS[0]}
+TEST_STATUS=${PIPESTATUS[0]}
 set -e
 [[ "$TEST_STATUS" -eq 0 ]] || fail "Instrumentation test failed (exit $TEST_STATUS)."
 
