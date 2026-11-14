@@ -13,6 +13,6 @@ sealed interface CheckInOutcome {
     /** The server no longer recognises the phone: it was unlocked and check-ins stopped. */
     data object StoodDown : CheckInOutcome
 
-    /** Paid off: protections removed, Device Owner given up, check-ins stopped. */
+    /** Paid off: protections removed, Device Owner removal verified, and check-ins stopped. */
     data object Released : CheckInOutcome
 }
