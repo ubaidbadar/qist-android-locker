@@ -48,15 +48,59 @@ class DpmDevicePolicy(
 
     override fun unlock() = asOwner { removeLock() }
 
-    override fun release() = asOwner {
-        removeLock()
-        restrictions.forEach { dpm.clearUserRestriction(admin, it) }
-        dpm.setUninstallBlocked(admin, packageName, false)
+    /**
+     * Remove every restriction Qist itself applies, then verify the resulting policy state before reporting success.
+     * This prevents the server from treating a partially released phone as ready for customer hand-back.
+     */
+    override fun release(): PolicyResult {
+        if (!dpm.isDeviceOwnerApp(packageName)) return PolicyResult.Failed(NOT_OWNER)
+        return try {
+            removeLock()
+            restrictions.forEach { dpm.clearUserRestriction(admin, it) }
+            dpm.setUninstallBlocked(admin, packageName, false)
+
+            val allQistRestrictions = (restrictions + networkRestrictions()).distinct()
+            val restrictionsRemain = allQistRestrictions.any { dpm.getUserRestrictions(admin).getBoolean(it) }
+            val uninstallBlocked = dpm.isUninstallBlocked(admin, packageName)
+            val lockTaskPackagesRemain = dpm.getLockTaskPackages(admin).isNotEmpty()
+            val lockHomeEnabled =
+                context.packageManager.getComponentEnabledSetting(lockHome) ==
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            val qistStillDefaultHome = context.packageManager
+                .resolveActivity(homeIntent(), PackageManager.MATCH_DEFAULT_ONLY)
+                ?.activityInfo
+                ?.let { ComponentName(it.packageName, it.name) == lockHome } == true
+
+            when {
+                restrictionsRemain -> PolicyResult.Failed(RESTRICTIONS_REMAIN)
+                uninstallBlocked -> PolicyResult.Failed(UNINSTALL_STILL_BLOCKED)
+                lockTaskPackagesRemain -> PolicyResult.Failed(LOCK_TASK_STILL_CONFIGURED)
+                lockHomeEnabled || qistStillDefaultHome -> PolicyResult.Failed(LOCK_HOME_STILL_CONFIGURED)
+                else -> PolicyResult.Applied
+            }
+        } catch (_: SecurityException) {
+            PolicyResult.Failed(REFUSED)
+        }
     }
 
-    // Deprecated for test DPCs, but it is the documented way for a Device Owner to hand the phone back.
+    /**
+     * Android deprecates clearDeviceOwnerApp and documents it as test-only/best-effort. Keep the call isolated,
+     * idempotent, and verify the framework's owner state instead of assuming a non-throwing call succeeded.
+     */
     @Suppress("DEPRECATION")
-    override fun relinquish() = asOwner { dpm.clearDeviceOwnerApp(packageName) }
+    override fun relinquish(): PolicyResult {
+        if (!dpm.isDeviceOwnerApp(packageName)) return PolicyResult.Applied
+        return try {
+            dpm.clearDeviceOwnerApp(packageName)
+            if (dpm.isDeviceOwnerApp(packageName)) {
+                PolicyResult.Failed(OWNER_REMAINS)
+            } else {
+                PolicyResult.Applied
+            }
+        } catch (_: SecurityException) {
+            PolicyResult.Failed(REFUSED)
+        }
+    }
 
     private fun applyProtections() {
         restrictions.forEach { dpm.addUserRestriction(admin, it) }
@@ -114,6 +158,8 @@ class DpmDevicePolicy(
         addCategory(Intent.CATEGORY_DEFAULT)
     }
 
+    private fun homeIntent() = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+
     /** Runs [block] only when this app is Device Owner, turning a refusal into [PolicyResult.Failed]. */
     private inline fun asOwner(block: () -> Unit): PolicyResult {
         if (!dpm.isDeviceOwnerApp(packageName)) return PolicyResult.Failed(NOT_OWNER)
@@ -130,5 +176,10 @@ class DpmDevicePolicy(
         const val SYSTEM_PHONE = "com.android.phone"
         const val NOT_OWNER = "app is not device owner"
         const val REFUSED = "android refused the policy"
+        const val OWNER_REMAINS = "android still reports this app as device owner"
+        const val RESTRICTIONS_REMAIN = "android did not clear all Qist restrictions"
+        const val UNINSTALL_STILL_BLOCKED = "android still blocks Qist uninstall"
+        const val LOCK_TASK_STILL_CONFIGURED = "android still has Qist lock-task packages configured"
+        const val LOCK_HOME_STILL_CONFIGURED = "android still has Qist configured as the Home app"
     }
 }
