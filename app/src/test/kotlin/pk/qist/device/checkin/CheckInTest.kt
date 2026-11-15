@@ -202,6 +202,28 @@ class CheckInTest {
     }
 
     @Test
+    fun `failed Device Owner removal stays pending and does not stop check-ins`() = runTest {
+        val store = InMemoryStore(enrolled)
+        policy.relinquishResult = PolicyResult.Failed("android refused the policy")
+        respond("c4" to "release")
+
+        assertEquals(CheckInOutcome.RetryLater, checkIn(store).run())
+
+        assertEquals(listOf("protect", "release", "relinquish"), policy.calls)
+        assertEquals(Enrolment.Releasing("d1", "d1.secret", "c4"), store.value.enrolment)
+        assertEquals(emptyList<String>(), scheduler.requests)
+
+        // A later retry succeeds after Android confirms that Device Owner has actually been cleared.
+        policy.relinquishResult = PolicyResult.Applied
+        assertEquals(CheckInOutcome.Released, checkIn(store).run())
+
+        assertEquals(listOf("protect", "release", "relinquish", "relinquish"), policy.calls)
+        assertEquals(Enrolment.Released, store.value.enrolment)
+        assertEquals(listOf("cancel check-ins"), scheduler.requests)
+        assertEquals(listOf("c4", "c4"), api.acks.map { it.first })
+    }
+
+    @Test
     fun `release completes even though stopping check-ins stops the running job`() = runTest {
         val store = InMemoryStore(enrolled)
         respond("c3" to "release")

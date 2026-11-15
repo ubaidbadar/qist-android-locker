@@ -25,8 +25,8 @@ sealed interface Enrolment {
     }
 
     /**
-     * Paid off: protections already removed, waiting for the server to confirm [commandId]. Saved before telling the
-     * server so an interrupted release is finished on the next run instead of being protected again.
+     * Paid off: local protections are removed; waiting for server confirmation and verified Device Owner removal.
+     * Saved before confirming so an interrupted hand-back resumes on the next run instead of reapplying protections.
      */
     @Serializable
     @SerialName("releasing")

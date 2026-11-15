@@ -1,0 +1,53 @@
+name: Device Owner release emulator (self-hosted Mac)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_api_level:
+        description: Android API level of the already-running clean ARM64 AVD
+        required: true
+        type: choice
+        options:
+          - '34'
+          - '35'
+          - '36'
+        default: '36'
+      emulator_serial:
+        description: Optional exact ADB emulator serial (for example emulator-5554)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  device-owner-release:
+    name: Device Owner release on local Mac emulator
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 90
+    steps:
+      - name: Check out QA branch
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Run isolated Android Device Owner release test
+        env:
+          QIST_EXPECTED_API_LEVEL: ${{ inputs.expected_api_level }}
+          QIST_EMULATOR_SERIAL: ${{ inputs.emulator_serial }}
+        run: |
+          chmod +x scripts/qa/device-owner-release-macos.sh
+          ./scripts/qa/device-owner-release-macos.sh
+
+      - name: Upload emulator evidence
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: qist-device-owner-release-evidence
+          path: build/reports/device-owner-release/
+          if-no-files-found: warn
+          retention-days: 14

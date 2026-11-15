@@ -173,10 +173,19 @@ class CheckIn(
      * check-ins. Cancelling check-ins stops the very job running this code, so it must come last.
      */
     private suspend fun finishRelease(): CheckInOutcome {
-        store.updateData { DeviceState(enrolment = Enrolment.Released) }
-        policy.relinquish()
-        scheduler.cancelCheckIns()
-        return CheckInOutcome.Released
+        return when (policy.relinquish()) {
+            PolicyResult.Applied -> {
+                // Persist completion only after Android confirms this package is no longer Device Owner.
+                store.updateData { DeviceState(enrolment = Enrolment.Released) }
+                // Cancelling check-ins stops the very job running this code, so it must come last.
+                scheduler.cancelCheckIns()
+                CheckInOutcome.Released
+            }
+            is PolicyResult.Failed -> {
+                // Keep Enrolment.Releasing and periodic check-ins so the hand-back can be retried safely.
+                CheckInOutcome.RetryLater
+            }
+        }
     }
 
     private companion object {

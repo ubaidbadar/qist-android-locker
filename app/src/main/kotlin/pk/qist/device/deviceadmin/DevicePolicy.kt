@@ -17,6 +17,9 @@ interface DevicePolicy {
     /** Paid off: removes the lock and every protection. */
     fun release(): PolicyResult
 
-    /** Gives up Device Owner for good. Only after [release] and after the server has been told. */
+    /**
+     * Gives up Device Owner after [release] and server confirmation.
+     * Returns Applied only when Android reports this package is no longer Device Owner.
+     */
     fun relinquish(): PolicyResult
 }

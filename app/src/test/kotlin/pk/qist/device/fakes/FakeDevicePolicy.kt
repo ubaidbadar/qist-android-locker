@@ -6,6 +6,7 @@ import pk.qist.device.deviceadmin.PolicyResult
 /** Records each policy call in order; [result] is what every call returns. */
 class FakeDevicePolicy : DevicePolicy {
     var result: PolicyResult = PolicyResult.Applied
+    var relinquishResult: PolicyResult? = null
     val calls = mutableListOf<String>()
 
     private fun record(name: String) = result.also { calls += name }
@@ -18,5 +19,5 @@ class FakeDevicePolicy : DevicePolicy {
 
     override fun release() = record("release")
 
-    override fun relinquish() = record("relinquish")
+    override fun relinquish() = (relinquishResult ?: result).also { calls += "relinquish" }
 }
