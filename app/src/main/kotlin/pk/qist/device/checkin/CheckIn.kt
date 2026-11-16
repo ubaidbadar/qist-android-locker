@@ -172,19 +172,18 @@ class CheckIn(
      * The server has the release confirmation: forget the credential, give up Device Owner, and only then stop
      * check-ins. Cancelling check-ins stops the very job running this code, so it must come last.
      */
-    private suspend fun finishRelease(): CheckInOutcome {
-        return when (policy.relinquish()) {
-            PolicyResult.Applied -> {
-                // Persist completion only after Android confirms this package is no longer Device Owner.
-                store.updateData { DeviceState(enrolment = Enrolment.Released) }
-                // Cancelling check-ins stops the very job running this code, so it must come last.
-                scheduler.cancelCheckIns()
-                CheckInOutcome.Released
-            }
-            is PolicyResult.Failed -> {
-                // Keep Enrolment.Releasing and periodic check-ins so the hand-back can be retried safely.
-                CheckInOutcome.RetryLater
-            }
+    private suspend fun finishRelease(): CheckInOutcome = when (policy.relinquish()) {
+        PolicyResult.Applied -> {
+            // Persist completion only after Android confirms this package is no longer Device Owner.
+            store.updateData { DeviceState(enrolment = Enrolment.Released) }
+            // Cancelling check-ins stops the very job running this code, so it must come last.
+            scheduler.cancelCheckIns()
+            CheckInOutcome.Released
+        }
+
+        is PolicyResult.Failed -> {
+            // Keep Enrolment.Releasing and periodic check-ins so the hand-back can be retried safely.
+            CheckInOutcome.RetryLater
         }
     }
 

@@ -35,7 +35,8 @@ fun LockScreenContent(
     screen: LockScreenUi,
     onCallBranch: (phone: String) -> Unit,
     onEmergencyCall: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onReviewSignIn: (() -> Unit)? = null
 ) {
     MaterialTheme(colorScheme = QistLockColors) {
         Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -60,6 +61,14 @@ fun LockScreenContent(
                         onEmergencyCall = onEmergencyCall,
                         modifier = Modifier.padding(top = 8.dp)
                     )
+                    onReviewSignIn?.let { review ->
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = review,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Review customer sign-in request")
+                        }
+                    }
                     if (screen.amountDue != null) {
                         Text(
                             text = stringResource(R.string.lock_payment_footer),

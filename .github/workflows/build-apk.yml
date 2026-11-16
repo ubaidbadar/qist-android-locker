@@ -36,7 +36,7 @@ jobs:
         run: |
           API_URL="${{ secrets.API_URL || vars.API_URL || secrets.VITE_API_URL || vars.VITE_API_URL || 'https://qist.restora.live/api/v1' }}"
           echo "Building APK pointing to: $API_URL"
-          ./gradlew assembleDebug -Pqist.apiUrl.debug="$API_URL" --no-daemon
+          ./gradlew :app:check :app:assembleDebug -Pqist.apiUrl.debug="$API_URL" --no-daemon
 
       - name: Upload APK as Artifact
         uses: actions/upload-artifact@v5
@@ -44,6 +44,42 @@ jobs:
           name: qist-locker-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
+
+      # Manual branch builds produce a test update; they never overwrite Cloudflare's production object.
+      - name: Build signed validation APK
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!key}" ]]; then echo "::error::Missing signing setting $key"; exit 1; fi
+          done
+          umask 077
+          SIGNING_FILE="$RUNNER_TEMP/locker-validation.jks"
+          trap 'rm -f "$SIGNING_FILE"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$SIGNING_FILE"
+          API_URL="${{ secrets.API_URL || vars.API_URL || secrets.VITE_API_URL || vars.VITE_API_URL || 'https://qist.restora.live/api/v1' }}"
+          ./gradlew :app:assembleRelease -Pqist.apiUrl.release="$API_URL" \
+            -Pqist.signing.storeFile="$SIGNING_FILE" \
+            -Pqist.signing.storePassword="$KEYSTORE_PASSWORD" \
+            -Pqist.signing.keyAlias="$KEY_ALIAS" \
+            -Pqist.signing.keyPassword="$KEY_PASSWORD" --no-daemon
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload signed validation APK
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v5
+        with:
+          name: qist-locker-signed-validation-${{ github.run_id }}
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Publish GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
