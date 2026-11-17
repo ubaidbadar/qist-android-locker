@@ -17,6 +17,12 @@ interface WorkScheduler {
     /** Continue a healthy partial download without treating useful progress as a network failure. */
     fun continueCustomerApp(wifiOnly: Boolean)
 
+    /** Independent background checks for the signed Locker APK on Cloudflare. */
+    fun scheduleLockerUpdates()
+
+    /** Reconcile an install result or retry a deferred update after unlocking. */
+    fun lockerUpdateNow()
+
     /** Stop all check-ins: the phone is released or its enrolment was revoked. */
     fun cancelCheckIns()
 }

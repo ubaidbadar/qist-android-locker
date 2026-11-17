@@ -1,12 +1,14 @@
 package pk.qist.device.data
 
 import kotlinx.serialization.Serializable
-import pk.qist.device.customer.CustomerAppState
+import pk.qist.device.apk.AppInstallState
 
 /** Everything the app remembers, in one small encrypted file. Changed only through `DataStore.updateData`. */
 @Serializable
 data class DeviceState(
-    val customerApp: CustomerAppState = CustomerAppState(),
+    val lockerApp: AppInstallState = AppInstallState(),
+    val lockerUpdate: pk.qist.device.updates.LockerUpdateState = pk.qist.device.updates.LockerUpdateState(),
+    val customerApp: AppInstallState = AppInstallState(),
     val enrolment: Enrolment = Enrolment.NotProvisioned,
     val lockState: LockState = LockState.UNLOCKED,
     val pushToken: String = "",

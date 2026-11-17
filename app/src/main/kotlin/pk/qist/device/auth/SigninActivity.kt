@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import pk.qist.device.container
 import pk.qist.device.ui.theme.QistTheme
@@ -46,6 +48,7 @@ class SigninActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             QistTheme {
                 val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -77,32 +80,62 @@ class SigninActivity : ComponentActivity() {
                         requests.forEach { request ->
                             key(request.requestId) {
                                 var number by remember(request.requestId) { mutableStateOf("") }
+                                var code by remember(request.requestId) { mutableStateOf<String?>(null) }
+                                LaunchedEffect(request.requestId) {
+                                    delay(
+                                        (
+                                            signinExpiry(
+                                                request.expiresAt
+                                            ) - System.currentTimeMillis()
+                                            ).coerceIn(0, 180_000)
+                                    )
+                                    code = null
+                                    refresh()
+                                }
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("Sign-in on another phone", style = MaterialTheme.typography.titleLarge)
-                                    Text(
-                                        "Enter the three-digit number shown on the phone where you started signing in. Requests expire after three minutes."
-                                    )
-                                    OutlinedTextField(
-                                        value = number,
-                                        onValueChange = { number = it.filter(Char::isDigit).take(3) },
-                                        label = { Text("Three-digit number") },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true,
-                                        enabled = !busy
-                                    )
-                                    Button(
-                                        onClick = { decide(request, true, number) },
-                                        enabled =
-                                            !busy && number.matches(Regex("[0-9]{3}")) && unavailable == null
-                                    ) {
-                                        Text("Approve sign-in")
+                                    if (request.kind == "otp") {
+                                        Text(
+                                            "Only show a code for a sign-in you started. " +
+                                                "Enter it in Qist Customer on the other device. " +
+                                                "Never share it with staff or callers."
+                                        )
+                                        code?.let { LockerCodeCard(it, request.expiresAt) { code = null } }
+                                        Button(
+                                            onClick = { showCode(request) { code = it } },
+                                            enabled =
+                                                !busy && unavailable == null
+                                        ) {
+                                            Text(if (code == null) "Show sign-in code" else "Show code again")
+                                        }
+                                    } else {
+                                        Text(
+                                            "Enter the three-digit number shown on the phone where you started signing in. Requests expire after three minutes."
+                                        )
+                                        OutlinedTextField(
+                                            value = number,
+                                            onValueChange = { number = it.filter(Char::isDigit).take(3) },
+                                            label = { Text("Three-digit number") },
+                                            keyboardOptions = KeyboardOptions(
+                                                keyboardType = KeyboardType.NumberPassword
+                                            ),
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            enabled = !busy
+                                        )
+                                        Button(
+                                            onClick = { decide(request, true, number) },
+                                            enabled =
+                                                !busy && number.matches(Regex("[0-9]{3}")) && unavailable == null
+                                        ) {
+                                            Text("Approve sign-in")
+                                        }
+                                        OutlinedButton(
+                                            onClick = { decide(request, false, "") },
+                                            enabled =
+                                                !busy && unavailable == null
+                                        ) { Text("Deny request") }
                                     }
-                                    OutlinedButton(
-                                        onClick = { decide(request, false, "") },
-                                        enabled =
-                                            !busy && unavailable == null
-                                    ) { Text("Deny request") }
                                 }
                             }
                         }
@@ -121,6 +154,34 @@ class SigninActivity : ComponentActivity() {
     private fun refresh() {
         if (busy) return
         lifecycleScope.launch { container.customerSignin.refresh() }
+    }
+
+    private fun showCode(request: SigninRequest, onCode: (String) -> Unit) {
+        if (busy) return
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        if (keyguard.isDeviceLocked) {
+            message = "Unlock this phone to view your sign-in code."
+            if (Build.VERSION.SDK_INT >= 26) keyguard.requestDismissKeyguard(this, null)
+            return
+        }
+        busy = true
+        message = null
+        lifecycleScope.launch {
+            try {
+                val code = container.customerSignin.showCode(request)
+                if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) onCode(code)
+            } catch (
+                error: CancellationException
+            ) {
+                throw error
+            } catch (
+                _: Exception
+            ) {
+                message = "This code is unavailable or expired. Refresh the request and try again."
+            } finally {
+                busy = false
+            }
+        }
     }
 
     private fun decide(request: SigninRequest, approve: Boolean, number: String) {

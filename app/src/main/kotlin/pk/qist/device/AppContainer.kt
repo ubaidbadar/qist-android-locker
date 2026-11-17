@@ -15,10 +15,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
+import pk.qist.device.apk.ApkDownload
+import pk.qist.device.apk.ManagedApkInstaller
 import pk.qist.device.checkin.CheckIn
 import pk.qist.device.checkin.CommandRunner
-import pk.qist.device.customer.ApkDownload
-import pk.qist.device.customer.CustomerAppInstaller
 import pk.qist.device.data.DeviceApi
 import pk.qist.device.data.DeviceState
 import pk.qist.device.data.DeviceStateSerializer
@@ -84,7 +84,34 @@ class AppContainer(private val context: Context) {
             .readTimeout(60, TimeUnit.SECONDS)
             .callTimeout(180, TimeUnit.SECONDS)
             .build()
-        CustomerAppInstaller(context, store, scheduler, ApkDownload(downloads), io)
+        ManagedApkInstaller(context, store, scheduler, ApkDownload(downloads), io)
+    }
+
+    private val updateClient by lazy {
+        httpClient.newBuilder().followRedirects(false).followSslRedirects(false)
+            .readTimeout(60, TimeUnit.SECONDS).callTimeout(180, TimeUnit.SECONDS).build()
+    }
+
+    val lockerInstaller by lazy {
+        ManagedApkInstaller(
+            context,
+            store,
+            scheduler,
+            ApkDownload(updateClient),
+            io,
+            pk.qist.device.apk.InstallTarget.LOCKER
+        )
+    }
+
+    val lockerUpdater by lazy {
+        pk.qist.device.updates.LockerUpdater(
+            context,
+            store,
+            pk.qist.device.updates.CloudflareApkSource(updateClient),
+            BuildConfig.LOCKER_UPDATE_APK_URL.toHttpUrl(),
+            lockerInstaller,
+            io
+        )
     }
 
     internal val customerSignin by lazy {

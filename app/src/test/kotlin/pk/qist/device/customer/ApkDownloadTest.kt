@@ -15,6 +15,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import pk.qist.device.apk.ApkDownload
+import pk.qist.device.apk.ApkRelease
+import pk.qist.device.apk.AppInstallState
 
 class ApkDownloadTest {
     @Test
@@ -33,8 +36,8 @@ class ApkDownloadTest {
 
     @After fun close() = server.close()
 
-    private fun release() = CustomerAppRelease(
-        CustomerAppState.PACKAGE,
+    private fun release() = ApkRelease(
+        AppInstallState.CUSTOMER_PACKAGE,
         2,
         24,
         server.url("/app.apk").toString(),
