@@ -21,6 +21,7 @@ import pk.qist.device.apk.ApkRelease
 import pk.qist.device.apk.ApkVerifier
 import pk.qist.device.apk.AppInstallReport
 import pk.qist.device.apk.ManagedApkInstaller
+import pk.qist.device.apk.reserveApkSpace
 import pk.qist.device.data.DeviceState
 import pk.qist.device.data.Enrolment
 
@@ -31,7 +32,11 @@ class LockerUpdater(
     private val source: CloudflareApkSource,
     private val url: HttpUrl,
     private val installer: ManagedApkInstaller,
-    private val io: CoroutineDispatcher
+    private val io: CoroutineDispatcher,
+    private val reserveSpace: (
+        File,
+        Long
+    ) -> Boolean = { directory, bytes -> reserveApkSpace(context, directory, bytes) }
 ) {
     private val mutex = Mutex()
     private val directory = File(context.noBackupFilesDir, "locker-apk")
@@ -56,7 +61,7 @@ class LockerUpdater(
                     ) {
                         partial.delete()
                     }
-                    store.updateData {
+                    val downloading = store.updateData {
                         if (it.enrolment != before.enrolment) {
                             it
                         } else {
@@ -70,6 +75,25 @@ class LockerUpdater(
                                 )
                             )
                         }
+                    }
+                    if (downloading.enrolment != before.enrolment) return@withLock false
+                    // A newer upload supersedes the old staged APK, including while finance lock defers installation.
+                    directory.listFiles()?.filter { it.name.endsWith(".apk.part") }?.forEach { it.delete() }
+                    val needed = (remote.size - partial.length()).coerceAtLeast(0) + remote.size + 10 * 1024 * 1024
+                    if (!reserveSpace(directory, needed)) {
+                        store.updateData {
+                            if (it.enrolment != before.enrolment) {
+                                it
+                            } else {
+                                it.copy(
+                                    lockerApp = it.lockerApp.copy(
+                                        report = AppInstallReport("needs_attention", detailCode = "storage")
+                                    ),
+                                    lockerUpdate = it.lockerUpdate.copy(status = "storage")
+                                )
+                            }
+                        }
+                        return@withLock true
                     }
                     if (!source.download(remote, partial)) return@withLock true
                     currentCoroutineContext().ensureActive()

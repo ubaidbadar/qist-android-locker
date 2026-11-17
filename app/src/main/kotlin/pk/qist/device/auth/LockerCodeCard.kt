@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.os.PersistableBundle
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -157,14 +158,17 @@ internal fun LockerCodeCard(code: String, expiresAt: String, onHide: () -> Unit)
 @Composable
 private fun CodeExpiry(expiresAt: String, onExpire: () -> Unit) {
     val expire by rememberUpdatedState(onExpire)
-    val until = remember(expiresAt) { signinExpiry(expiresAt) }
+    // Translate server expiry once; changing the wall clock must never extend a visible code indefinitely.
+    val until = remember(expiresAt) {
+        SystemClock.elapsedRealtime() + (signinExpiry(expiresAt) - System.currentTimeMillis()).coerceIn(0, 180_000)
+    }
     var remaining by remember(until) {
-        mutableLongStateOf(((until - System.currentTimeMillis()) / 1000).coerceIn(0, 180))
+        mutableLongStateOf(((until - SystemClock.elapsedRealtime()) / 1000).coerceIn(0, 180))
     }
     LaunchedEffect(until) {
         while (remaining > 0) {
             delay(1000)
-            remaining = ((until - System.currentTimeMillis()) / 1000).coerceIn(0, 180)
+            remaining = ((until - SystemClock.elapsedRealtime()) / 1000).coerceIn(0, 180)
         }
         expire()
     }
