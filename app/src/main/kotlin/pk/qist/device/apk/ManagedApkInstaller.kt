@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.os.Build
-import android.os.storage.StorageManager
 import android.provider.Settings
 import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
@@ -119,7 +118,12 @@ class ManagedApkInstaller(
         directory.mkdirs()
         val file = File(directory, "${release.sha256}.apk.part")
         directory.listFiles()?.filter { it != file }?.forEach { it.delete() }
-        if (!reserveSpace((release.sizeBytes - file.length()).coerceAtLeast(0) + release.sizeBytes)) {
+        if (!reserveApkSpace(
+                context,
+                directory,
+                (release.sizeBytes - file.length()).coerceAtLeast(0) + release.sizeBytes
+            )
+        ) {
             report(release, AppInstallReport("needs_attention", detailCode = "storage"))
             return true
         }
@@ -224,22 +228,6 @@ class ManagedApkInstaller(
                     sessionStartedAt = 0
                 )
             )
-        }
-    }
-
-    private fun reserveSpace(bytes: Long): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return directory.usableSpace >= bytes
-        val storage = context.getSystemService(StorageManager::class.java)
-        return try {
-            val volume = storage.getUuidForPath(directory)
-            if (storage.getAllocatableBytes(volume) < bytes) {
-                false
-            } else {
-                storage.allocateBytes(volume, bytes)
-                true
-            }
-        } catch (_: IOException) {
-            false
         }
     }
 
