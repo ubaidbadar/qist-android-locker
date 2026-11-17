@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
+import pk.qist.device.container
 import pk.qist.device.ui.theme.QistTheme
 
 /**
@@ -37,12 +38,25 @@ class LockActivity : ComponentActivity() {
 
         setContent {
             QistTheme {
+                val signins by container.customerSignin.requests.collectAsStateWithLifecycle()
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 (state as? LockUiState.Locked)?.let { locked ->
                     LockScreenContent(
                         screen = locked.screen,
                         onCallBranch = { phone -> openDialer(phone) },
-                        onEmergencyCall = { openDialer() }
+                        onEmergencyCall = { openDialer() },
+                        onReviewSignIn = if (signins.isEmpty()) {
+                            null
+                        } else {
+                            {
+                                startActivity(
+                                    android.content.Intent(
+                                        this@LockActivity,
+                                        pk.qist.device.auth.SigninActivity::class.java
+                                    )
+                                )
+                            }
+                        }
                     )
                 }
             }

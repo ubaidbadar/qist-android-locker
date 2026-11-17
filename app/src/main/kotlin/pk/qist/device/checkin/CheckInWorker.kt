@@ -7,10 +7,14 @@ import pk.qist.device.container
 
 /** Runs one [CheckIn]; WorkManager retries with back-off when the server cannot be reached. */
 class CheckInWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
-    override suspend fun doWork(): Result = when (applicationContext.container.checkIn.run()) {
-        CheckInOutcome.Done, CheckInOutcome.NotEnrolled, CheckInOutcome.StoodDown, CheckInOutcome.Released ->
-            Result.success()
+    override suspend fun doWork(): Result {
+        val outcome = applicationContext.container.checkIn.run()
+        if (outcome != CheckInOutcome.RetryLater) applicationContext.container.customerSignin.refresh()
+        return when (outcome) {
+            CheckInOutcome.Done, CheckInOutcome.NotEnrolled, CheckInOutcome.StoodDown, CheckInOutcome.Released ->
+                Result.success()
 
-        CheckInOutcome.RetryLater -> Result.retry()
+            CheckInOutcome.RetryLater -> Result.retry()
+        }
     }
 }

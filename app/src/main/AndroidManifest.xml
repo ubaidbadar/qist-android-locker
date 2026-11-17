@@ -6,13 +6,15 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <permission android:name="pk.qist.device.permission.CUSTOMER_AUTH" android:protectionLevel="signature" />
+
     <queries>
         <package android:name="pk.qist.customer" />
     </queries>
 
-    <!-- No launcher entry on purpose: the customer has nothing to open. Android adds no stand-in icon for a
-         Device Owner app, so the app shows only in Settings > Apps, where it cannot be uninstalled.
-         Nothing in this app may be copied off the phone by a backup: the credential would travel with it. -->
+    <!-- Only the sign-in review screen has a launcher entry. Finance management stays internal.
+         Nothing in this app may be copied off the phone by a backup: credentials must remain device-bound. -->
     <application
         android:name=".QistApp"
         android:allowBackup="false"
@@ -25,6 +27,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Qist"
         tools:targetApi="37">
+
+        <service android:name=".auth.CustomerSigninService" android:exported="true"
+            android:permission="pk.qist.device.permission.CUSTOMER_AUTH" />
+        <activity android:name=".auth.SigninActivity" android:exported="true" android:lockTaskMode="if_whitelisted" android:label="Qist sign-in">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!-- FCM sends only wake-up signals; authenticated commands still come from our API. -->
         <service

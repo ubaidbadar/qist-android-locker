@@ -87,5 +87,9 @@ class AppContainer(private val context: Context) {
         CustomerAppInstaller(context, store, scheduler, ApkDownload(downloads), io)
     }
 
+    internal val customerSignin by lazy {
+        pk.qist.device.auth.CustomerSignin(context, store, httpClient, BuildConfig.API_URL.toHttpUrl(), json)
+    }
+
     val checkIn by lazy { CheckIn(api, store, policy, CommandRunner(store, policy), scheduler, appInfo) }
 }
