@@ -66,14 +66,14 @@ internal class CustomerSignin(
 
     suspend fun refresh() = withContext(Dispatchers.IO) {
         mutex.withLock {
-            val enrolled = store.data.first().enrolment as? Enrolment.Enrolled
-            if (enrolled == null) {
-                mutable.value = emptyList()
-                mutableError.value = "This phone is no longer enrolled for sign-in."
-                notifications().cancel(NOTIFICATION_ID)
-                return@withLock
-            }
             try {
+                val enrolled = store.data.first().enrolment as? Enrolment.Enrolled
+                if (enrolled == null) {
+                    mutable.value = emptyList()
+                    mutableError.value = "This phone is no longer enrolled for sign-in."
+                    notifications().cancel(NOTIFICATION_ID)
+                    return@withLock
+                }
                 register(enrolled)
                 val body = api(enrolled, "pending")
                 val pending = body.getValue("requests").jsonArray.map { parse(it.jsonObject) }
