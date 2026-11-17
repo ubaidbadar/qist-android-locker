@@ -65,7 +65,8 @@ class LockerUpdaterTest {
             CloudflareApkSource(client),
             "https://example.com/qist.apk".toHttpUrl(),
             installer,
-            dispatcher
+            dispatcher,
+            reserveSpace = { _, _ -> true }
         )
         assertFalse(updater.run()) // Invalid archive is rejected, never installed.
         assertEquals(2, calls)
