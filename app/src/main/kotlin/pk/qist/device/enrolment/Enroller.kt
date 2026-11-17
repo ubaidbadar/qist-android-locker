@@ -4,7 +4,7 @@ import androidx.datastore.core.DataStore
 import kotlinx.coroutines.flow.first
 import pk.qist.device.AppInfo
 import pk.qist.device.WorkScheduler
-import pk.qist.device.customer.CustomerAppState
+import pk.qist.device.apk.AppInstallState
 import pk.qist.device.data.ApiResult
 import pk.qist.device.data.DeviceApi
 import pk.qist.device.data.DeviceState
@@ -49,9 +49,9 @@ class Enroller(
                 store.updateData {
                     it.copy(
                         enrolment = Enrolment.Enrolled(credential.deviceId, credential.token),
-                        customerApp = CustomerAppState(
+                        customerApp = AppInstallState(
                             notBefore =
-                                System.currentTimeMillis() + CustomerAppState.SETUP_DELAY_MILLIS
+                                System.currentTimeMillis() + AppInstallState.SETUP_DELAY_MILLIS
                         ),
                         checkInSeconds = credential.checkInSeconds
                     )

@@ -34,4 +34,10 @@ class RecordingScheduler(private val cancelStopsCaller: Boolean = false) : WorkS
         requests += "cancel check-ins"
         if (cancelStopsCaller) throw CancellationException("check-in job cancelled")
     }
+    override fun scheduleLockerUpdates() {
+        requests += "locker updates"
+    }
+    override fun lockerUpdateNow() {
+        requests += "locker update now"
+    }
 }

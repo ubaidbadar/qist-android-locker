@@ -1,4 +1,4 @@
-package pk.qist.device.customer
+package pk.qist.device.apk
 
 import android.content.pm.PackageManager
 import android.os.Build
@@ -8,17 +8,20 @@ import java.security.MessageDigest
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /** Whole-file hashes pin the approved signed artifact on every supported Android version. */
-class CustomerApkVerifier(private val packages: PackageManager) {
-    fun validateRelease(release: CustomerAppRelease) {
+class ApkVerifier(
+    private val packages: PackageManager,
+    private val expectedPackage: String = AppInstallState.CUSTOMER_PACKAGE
+) {
+    fun validateRelease(release: ApkRelease) {
         val url = release.apkUrl.toHttpUrlOrNull()
-        require(release.packageName == CustomerAppState.PACKAGE)
+        require(release.packageName == expectedPackage)
         require(release.versionCode in 1..2_100_000_000L && release.minSdk >= 24)
         require(release.sizeBytes in 1..200L * 1024 * 1024)
         require(HASH.matches(release.sha256) && HASH.matches(release.signingCertificateSha256))
         require(url != null && url.isHttps && url.username.isEmpty() && url.password.isEmpty() && url.fragment == null)
     }
 
-    fun installedVersion(release: CustomerAppRelease): Long? = try {
+    fun installedVersion(release: ApkRelease): Long? = try {
         val info = packages.getPackageInfo(release.packageName, 0)
         val signatures = PackageInfoCompat.getSignatures(packages, release.packageName)
         require(signatures.size == 1 && digest(signatures.single().toByteArray()) == release.signingCertificateSha256) {
@@ -29,7 +32,7 @@ class CustomerApkVerifier(private val packages: PackageManager) {
         null
     }
 
-    fun verify(file: File, release: CustomerAppRelease) {
+    fun verify(file: File, release: ApkRelease) {
         require(file.length() == release.sizeBytes)
         val hash = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->

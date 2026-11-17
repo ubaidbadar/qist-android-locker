@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit
 import pk.qist.device.checkin.CheckInWorker
 import pk.qist.device.customer.CustomerAppWorker
 import pk.qist.device.enrolment.EnrolWorker
+import pk.qist.device.updates.LockerUpdateWorker
 
 /**
  * [WorkScheduler] on WorkManager: jobs survive reboots, wait for a network, back off on failure and respect Doze,
@@ -51,6 +52,8 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
     }
 
     override fun cancelCheckIns() {
+        workManager().cancelUniqueWork(LOCKER_UPDATE)
+        workManager().cancelUniqueWork(LOCKER_UPDATE_NOW)
         workManager().cancelUniqueWork(CUSTOMER_APP)
         workManager().cancelUniqueWork(PERIODIC)
         workManager().cancelUniqueWork(NOW)
@@ -72,6 +75,27 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
         )
     }
 
+    override fun scheduleLockerUpdates() {
+        val request = PeriodicWorkRequestBuilder<LockerUpdateWorker>(1, TimeUnit.HOURS)
+            .setConstraints(updateConstraints())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
+            .build()
+        workManager().enqueueUniquePeriodicWork(LOCKER_UPDATE, ExistingPeriodicWorkPolicy.UPDATE, request)
+    }
+
+    override fun lockerUpdateNow() {
+        val request = OneTimeWorkRequestBuilder<LockerUpdateWorker>()
+            .setConstraints(updateConstraints())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
+            .build()
+        workManager().enqueueUniqueWork(LOCKER_UPDATE_NOW, ExistingWorkPolicy.KEEP, request)
+    }
+
+    private fun updateConstraints() = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .setRequiresStorageNotLow(true)
+        .build()
+
     private fun customerWork(wifiOnly: Boolean, delayMillis: Long): OneTimeWorkRequest {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
@@ -85,6 +109,8 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
     }
 
     private companion object {
+        const val LOCKER_UPDATE = "locker-auto-update"
+        const val LOCKER_UPDATE_NOW = "locker-update-now"
         const val ENROL = "enrol"
         const val CUSTOMER_APP = "customer-app-install"
         const val PERIODIC = "check-in"

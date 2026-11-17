@@ -50,6 +50,8 @@
             android:name=".customer.CustomerInstallReceiver"
             android:exported="false" />
 
+        <receiver android:name=".updates.LockerInstallReceiver" android:exported="false" />
+
         <!-- The lock screen. Enters kiosk mode by itself when the app is on the lock-task allow-list. -->
         <activity
             android:name=".lock.LockActivity"
@@ -75,6 +77,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

@@ -19,8 +19,11 @@ android {
         // QR provisioning of a Device Owner needs Android 7.0.
         minSdk = 24
         targetSdk = 37
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.2.2"
+        val updateUrl = setting("qist.lockerUpdateApkUrl")
+        require(updateUrl.startsWith("https://")) { "qist.lockerUpdateApkUrl must use https" }
+        buildConfigField("String", "LOCKER_UPDATE_APK_URL", "\"$updateUrl\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

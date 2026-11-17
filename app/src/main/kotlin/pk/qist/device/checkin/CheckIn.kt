@@ -6,8 +6,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import pk.qist.device.AppInfo
 import pk.qist.device.WorkScheduler
-import pk.qist.device.customer.CustomerAppReport
-import pk.qist.device.customer.CustomerAppState
+import pk.qist.device.apk.AppInstallReport
+import pk.qist.device.apk.AppInstallState
 import pk.qist.device.data.AckRequest
 import pk.qist.device.data.ApiResult
 import pk.qist.device.data.CheckInRequest
@@ -72,13 +72,13 @@ class CheckIn(
                 customerApp = previous.copy(
                     release = release,
                     notBefore = previous.notBefore.takeIf { time -> time > 0 }
-                        ?: (System.currentTimeMillis() + CustomerAppState.SETUP_DELAY_MILLIS),
+                        ?: (System.currentTimeMillis() + AppInstallState.SETUP_DELAY_MILLIS),
                     report = if (release ==
                         null
                     ) {
-                        CustomerAppReport("not_configured")
+                        AppInstallReport("not_configured")
                     } else if (changed) {
-                        CustomerAppReport()
+                        AppInstallReport()
                     } else {
                         previous.report
                     },

@@ -1,4 +1,4 @@
-package pk.qist.device.customer
+package pk.qist.device.apk
 
 import java.io.File
 import java.io.IOException
@@ -10,7 +10,7 @@ import okhttp3.Request
 
 /** Bounded, resumable HTTP downloads. Each run yields before WorkManager's execution deadline. */
 class ApkDownload(private val client: OkHttpClient, private val runNanos: Long = RUN_NANOS) {
-    suspend fun download(release: CustomerAppRelease, file: File): Boolean {
+    suspend fun download(release: ApkRelease, file: File): Boolean {
         if (file.length() > release.sizeBytes) file.delete()
         val deadline = System.nanoTime() + runNanos
         while (file.length() < release.sizeBytes) {

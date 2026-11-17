@@ -124,6 +124,23 @@ internal class CustomerSignin(
         if (mutable.value.isEmpty()) notifications().cancel(NOTIFICATION_ID)
     }
 
+    suspend fun showCode(request: SigninRequest): String = withContext(Dispatchers.IO) {
+        require(request.kind == "otp")
+        requireUnlocked()
+        val enrolled = enrolled()
+        val response = api(
+            enrolled,
+            "code",
+            buildJsonObject {
+                put("requestId", request.requestId)
+                put("signature", key.sign(request.payload(enrolled.deviceId, "display_code", "")))
+            }
+        )
+        check(store.data.first().enrolment == enrolled)
+        requireUnlocked()
+        text(response, "code").also { require(it.matches(Regex("[0-9]{6}"))) }
+    }
+
     private fun requireUnlocked() {
         check(!context.getSystemService(KeyguardManager::class.java).isDeviceLocked) {
             "Unlock this phone to continue."

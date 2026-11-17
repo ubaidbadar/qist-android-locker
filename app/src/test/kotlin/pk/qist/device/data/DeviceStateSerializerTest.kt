@@ -45,6 +45,16 @@ class DeviceStateSerializerTest {
         assertEquals(DeviceState(), serializer.readFrom(ByteArrayInputStream(ByteArray(0))))
     }
 
+    @Test
+    fun `state from before updater preserves enrollment and lock without new fields`() = runTest {
+        val old = DeviceState(enrolment = Enrolment.Enrolled("d1", "d1.secret"), lockState = LockState.LOCKED)
+        val payload = Json.encodeToString(DeviceState.serializer(), old)
+        // Default properties were omitted by the previous serializer, exactly as in the installed app.
+        assertFalse(payload.contains("lockerApp"))
+        assertFalse(payload.contains("lockerUpdate"))
+        assertEquals(old, serializer.readFrom(ByteArrayInputStream(reversing.seal(payload.encodeToByteArray()))))
+    }
+
     @Test(expected = CorruptionException::class)
     fun `a garbled file is reported as corruption`() = runTest {
         serializer.readFrom(ByteArrayInputStream("not json".toByteArray()))
