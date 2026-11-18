@@ -45,6 +45,25 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
+      # Debug includes unshrunk Compose/Firebase code. Check the artifact actually sent during QR setup.
+      - name: Build minimized release APK for size verification (unsigned)
+        if: github.event_name == 'pull_request'
+        run: |
+          API_URL="${{ secrets.API_URL || vars.API_URL || secrets.VITE_API_URL || vars.VITE_API_URL || 'https://qist.restora.live/api/v1' }}"
+          ./gradlew :app:assembleRelease -Pqist.apiUrl.release="$API_URL" --no-daemon
+          APK="$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)"
+          test -n "$APK" && test -s "$APK"
+          echo "Release-size verification (unsigned): $(wc -c < "$APK") bytes" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload unsigned release size-check artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v5
+        with:
+          name: qist-locker-unsigned-release-size-check
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
       # Manual branch builds produce a test update; they never overwrite Cloudflare's production object.
       - name: Build signed validation APK
         if: github.event_name == 'workflow_dispatch'
