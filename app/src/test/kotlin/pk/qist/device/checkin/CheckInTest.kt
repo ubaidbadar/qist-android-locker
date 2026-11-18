@@ -271,6 +271,19 @@ class CheckInTest {
     }
 
     @Test
+    fun `emergency build clears policies when the previous build already marked the device revoked`() = runTest {
+        val revoked = DeviceState(enrolment = Enrolment.Revoked, lockState = LockState.LOCKED)
+        val store = InMemoryStore(revoked)
+
+        assertEquals(CheckInOutcome.StoodDown, checkIn(store, emergencyResetOnUnauthorized = true).run())
+
+        assertEquals(0, api.checkIns.size)
+        assertEquals(DeviceState(enrolment = Enrolment.Revoked), store.value)
+        assertEquals(listOf("release"), policy.calls)
+        assertEquals(listOf("cancel check-ins"), scheduler.requests)
+    }
+
+    @Test
     fun `emergency 401 retries if Android refuses policy cleanup`() = runTest {
         val store = InMemoryStore(enrolled)
         val emergencyCheckIn = checkIn(store, emergencyResetOnUnauthorized = true)
