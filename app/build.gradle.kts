@@ -10,6 +10,14 @@ plugins {
 fun setting(name: String): String =
     providers.gradleProperty(name).orNull ?: error("Missing Gradle property '$name' (see android/gradle.properties)")
 
+/**
+ * Deliberately opt-in. This flag must only be used to build the one-device recovery APK;
+ * normal builds keep the standard authenticated-release behaviour.
+ */
+val emergencyResetOnUnauthorized = providers.gradleProperty("qist.emergencyResetOnUnauthorized")
+    .map { it.toBooleanStrict() }
+    .getOrElse(false)
+
 android {
     namespace = "pk.qist.device"
     compileSdk = 37
@@ -24,8 +32,10 @@ android {
         // QR provisioning of a Device Owner needs Android 7.0.
         minSdk = 24
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.2.2"
+        // Emergency APK must update the currently published 0.2.2 (versionCode 4) installation.
+        versionCode = 5
+        versionName = "0.2.3-emergency"
+        buildConfigField("boolean", "EMERGENCY_RESET_ON_UNAUTHORIZED", emergencyResetOnUnauthorized.toString())
         val updateUrl = setting("qist.lockerUpdateApkUrl")
         require(updateUrl.startsWith("https://")) { "qist.lockerUpdateApkUrl must use https" }
         buildConfigField("String", "LOCKER_UPDATE_APK_URL", "\"$updateUrl\"")
