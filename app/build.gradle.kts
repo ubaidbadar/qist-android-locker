@@ -14,6 +14,11 @@ android {
     namespace = "pk.qist.device"
     compileSdk = 37
 
+    // Qist supports English and Urdu; avoid bundling unused library translations in the first-install APK.
+    androidResources {
+        localeFilters += setOf("en", "ur")
+    }
+
     defaultConfig {
         applicationId = "pk.qist.device"
         // QR provisioning of a Device Owner needs Android 7.0.
