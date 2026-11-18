@@ -33,7 +33,9 @@ The APK is written to `app/build/outputs/apk/release/app-release.apk`. Confirm i
 
 Transfer the signed APK to the Nokia and install it as an update over the existing Qist app. Android must accept it as the same package signed by the same certificate. Do not uninstall the current app first.
 
-After installation, connect the Nokia to the internet and allow a check-in. The backend's 401 response is the trigger. Once the app has cleared and verified the policies, open Android Settings and use the normal factory-reset option.
+After installation, keep the Nokia online and allow the package-replaced check-in to run. If its local state is still enrolled, the backend's 401 response is the trigger; if it was already revoked, the build performs cleanup locally without another API response. Once the app has cleared and verified the policies, open Android Settings and use the normal factory-reset option.
+
+This removes Qist's Settings factory-reset restriction; it does not bypass Google account verification/Factory Reset Protection if the phone or its OEM has a separate FRP requirement.
 
 ## Important isolation rules
 
