@@ -4,16 +4,16 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.core.app.ApplicationProvider
-import org.junit.Assert.assertFalse
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
-import org.junit.Test
+import org.junit.Assert.assertTrue
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
+import org.junit.Test
 import org.robolectric.annotation.Config
+import org.robolectric.Robolectric
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = Application::class)
