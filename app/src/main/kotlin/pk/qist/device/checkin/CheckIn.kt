@@ -42,6 +42,12 @@ class CheckIn(
         val enrolled = when (val enrolment = state.enrolment) {
             is Enrolment.Enrolled -> enrolment
             is Enrolment.Releasing -> return confirmRelease(enrolment)
+            Enrolment.Revoked -> {
+                // The previous production build may already have stopped check-ins after its first 401.
+                // The recovery APK must still be able to clear policies when it is installed over that state.
+                if (emergencyResetOnUnauthorized) return emergencyRelease()
+                return CheckInOutcome.NotEnrolled
+            }
             else -> return CheckInOutcome.NotEnrolled
         }
         val request =
@@ -167,23 +173,26 @@ class CheckIn(
      * Do not call the deprecated, test-only clearDeviceOwnerApp() API here.
      */
     private suspend fun standDown(): CheckInOutcome {
-        if (emergencyResetOnUnauthorized) {
-            return when (policy.release()) {
-                PolicyResult.Applied -> {
-                    // Drop the old credential and customer data only after Android confirms policy cleanup.
-                    store.updateData { DeviceState(enrolment = Enrolment.Revoked) }
-                    scheduler.cancelCheckIns()
-                    CheckInOutcome.StoodDown
-                }
-
-                is PolicyResult.Failed -> CheckInOutcome.RetryLater
-            }
-        }
+        if (emergencyResetOnUnauthorized) return emergencyRelease()
 
         runner.unlock()
         store.updateData { it.copy(enrolment = Enrolment.Revoked) }
         scheduler.cancelCheckIns()
         return CheckInOutcome.StoodDown
+    }
+
+    /**
+     * Emergency-only local hand-back. DevicePolicy.release() verifies that Qist's restrictions are gone before
+     * local credentials are discarded. It is safe to retry after a process interruption.
+     */
+    private suspend fun emergencyRelease(): CheckInOutcome = when (policy.release()) {
+        PolicyResult.Applied -> {
+            store.updateData { DeviceState(enrolment = Enrolment.Revoked) }
+            scheduler.cancelCheckIns()
+            CheckInOutcome.StoodDown
+        }
+
+        is PolicyResult.Failed -> CheckInOutcome.RetryLater
     }
 
     /**
