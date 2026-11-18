@@ -5,7 +5,8 @@ This branch exists only to recover the Nokia X20 whose Qist test database was de
 ## Behaviour
 
 - Build with `-Pqist.emergencyResetOnUnauthorized=true`.
-- When the installed locker next reaches the Qist API and receives HTTP 401, it calls the existing, verified `DevicePolicy.release()` implementation locally.
+- If the installed locker next reaches the Qist API and receives HTTP 401, it calls the existing, verified `DevicePolicy.release()` implementation locally.
+- It also performs the same cleanup if the previous production build already saved `Enrolment.Revoked` and stopped check-ins. The package-replaced boot receiver schedules a check-in, and the emergency build handles that saved state without needing another API response.
 - That clears Qist's factory-reset, safe-boot, add-user, USB-debugging and network restrictions; removes the uninstall block; disables the Qist Home alias; and empties the lock-task allow-list.
 - The app then clears its local device credential/customer state and stops its check-in/update work.
 - It deliberately does **not** call the deprecated, test-only `clearDeviceOwnerApp()`. Device Owner remains until Android performs the factory reset; the reset itself removes the Device Owner app registration.
