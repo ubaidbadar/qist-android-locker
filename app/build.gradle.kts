@@ -18,6 +18,12 @@ val emergencyResetOnUnauthorized = providers.gradleProperty("qist.emergencyReset
     .map { it.toBooleanStrict() }
     .getOrElse(false)
 
+if (emergencyResetOnUnauthorized) {
+    require(providers.gradleProperty("qist.signing.storeFile").isPresent) {
+        "Emergency recovery APK must be signed with the existing Qist release keystore."
+    }
+}
+
 android {
     namespace = "pk.qist.device"
     compileSdk = 37
