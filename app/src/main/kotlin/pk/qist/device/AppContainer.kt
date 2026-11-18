@@ -118,15 +118,5 @@ class AppContainer(private val context: Context) {
         pk.qist.device.auth.CustomerSignin(context, store, httpClient, BuildConfig.API_URL.toHttpUrl(), json)
     }
 
-    val checkIn by lazy {
-        CheckIn(
-            api,
-            store,
-            policy,
-            CommandRunner(store, policy),
-            scheduler,
-            appInfo,
-            emergencyResetOnUnauthorized = BuildConfig.EMERGENCY_RESET_ON_UNAUTHORIZED
-        )
-    }
+    val checkIn by lazy { CheckIn(api, store, policy, CommandRunner(store, policy), scheduler, appInfo) }
 }

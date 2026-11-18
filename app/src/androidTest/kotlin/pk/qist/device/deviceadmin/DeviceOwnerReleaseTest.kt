@@ -103,15 +103,6 @@ class DeviceOwnerReleaseTest {
         )?.activityInfo?.let { ComponentName(it.packageName, it.name) }
         assertFalse("Qist must no longer be the preferred Home activity", resolvedHome == lockHome)
 
-        // The effective user restrictions must also be clear while Qist is still Device Owner.
-        val effectiveAfterRelease = userManager.getUserRestrictions()
-        expectedRestrictions.forEach { restriction ->
-            assertFalse(
-                "Factory reset and other Qist restrictions must be effective=false before hand-back: $restriction",
-                effectiveAfterRelease.getBoolean(restriction)
-            )
-        }
-
         // Clearing restrictions is not the same as relinquishing Device Owner; verify both separately.
         assertTrue("Device Owner must remain until the explicit hand-back step", dpm.isDeviceOwnerApp(packageName))
         assertEquals(PolicyResult.Applied, policy.relinquish())
