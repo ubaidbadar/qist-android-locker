@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -100,50 +99,47 @@ internal fun LockerCodeCard(code: String, expiresAt: String, onHide: () -> Unit)
                 }
             }
             CodeExpiry(expiresAt, onHide)
-            run {
-                val actions: @Composable ColumnScope.() -> Unit = {
-                    Button(
-                        onClick = {
-                            try {
-                                val clip = ClipData.newPlainText("Qist sign-in code", code)
-                                clip.description.extras =
-                                    PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-                                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
-                                feedback = "Code copied"
-                            } catch (_: SecurityException) {
-                                feedback = "Copy is unavailable. Type the code manually."
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().heightIn(
-                            min = 48.dp
-                        ),
-                        colors = ButtonDefaults.buttonColors(containerColor = cyan, contentColor = Color(0xFF0C1C41))
-                    ) {
-                        Text("Copy code")
-                    }
-                    OutlinedButton(onClick = {
-                        val launch = context.packageManager.getLaunchIntentForPackage("pk.qist.customer")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
                         try {
-                            if (launch == null) {
-                                feedback = "Qist Customer is not installed on this phone."
-                            } else {
-                                context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                            }
-                        } catch (
-                            _: SecurityException
-                        ) {
-                            feedback = "Open Qist Customer from your home screen."
-                        } catch (
-                            _: android.content.ActivityNotFoundException
-                        ) {
-                            feedback =
-                                "Open Qist Customer from your home screen."
+                            val clip = ClipData.newPlainText("Qist sign-in code", code)
+                            clip.description.extras =
+                                PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+                            context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+                            feedback = "Code copied"
+                        } catch (_: SecurityException) {
+                            feedback = "Copy is unavailable. Type the code manually."
                         }
-                    }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                        Text("Open Qist", color = Color.White)
-                    }
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(
+                        min = 48.dp
+                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = cyan, contentColor = Color(0xFF0C1C41))
+                ) {
+                    Text("Copy code")
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = actions)
+                OutlinedButton(onClick = {
+                    val launch = context.packageManager.getLaunchIntentForPackage("pk.qist.customer")
+                    try {
+                        if (launch == null) {
+                            feedback = "Qist Customer is not installed on this phone."
+                        } else {
+                            context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        }
+                    } catch (
+                        _: SecurityException
+                    ) {
+                        feedback = "Open Qist Customer from your home screen."
+                    } catch (
+                        _: android.content.ActivityNotFoundException
+                    ) {
+                        feedback =
+                            "Open Qist Customer from your home screen."
+                    }
+                }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text("Open Qist", color = Color.White)
+                }
             }
             feedback?.let { Text(it, color = cyan) }
             Text(
