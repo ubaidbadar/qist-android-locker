@@ -13,7 +13,7 @@
         <package android:name="pk.qist.customer" />
     </queries>
 
-    <!-- Only the sign-in review screen has a launcher entry. Finance management stays internal.
+    <!-- Locker has no launcher icon. Qist Customer can open the review screen explicitly with a signature permission.
          Nothing in this app may be copied off the phone by a backup: credentials must remain device-bound. -->
     <application
         android:name=".QistApp"
@@ -30,12 +30,12 @@
 
         <service android:name=".auth.CustomerSigninService" android:exported="true"
             android:permission="pk.qist.device.permission.CUSTOMER_AUTH" />
-        <activity android:name=".auth.SigninActivity" android:exported="true" android:lockTaskMode="if_whitelisted" android:label="Qist sign-in">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <activity android:name=".auth.SigninActivity"
+            android:exported="true"
+            android:permission="pk.qist.device.permission.CUSTOMER_AUTH"
+            android:excludeFromRecents="true"
+            android:lockTaskMode="if_whitelisted"
+            android:label="Qist sign-in" />
 
         <!-- FCM sends only wake-up signals; authenticated commands still come from our API. -->
         <service
