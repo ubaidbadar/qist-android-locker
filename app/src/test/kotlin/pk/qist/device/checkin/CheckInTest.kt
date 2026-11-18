@@ -60,8 +60,16 @@ class CheckInTest {
     private val scheduler = RecordingScheduler()
     private val enrolled = DeviceState(enrolment = Enrolment.Enrolled("d1", "d1.secret"), checkInSeconds = 900)
 
-    private fun checkIn(store: InMemoryStore) =
-        CheckIn(api, store, policy, CommandRunner(store, policy), scheduler, AppInfo("1.0", "14"))
+    private fun checkIn(store: InMemoryStore, emergencyResetOnUnauthorized: Boolean = false) =
+        CheckIn(
+            api,
+            store,
+            policy,
+            CommandRunner(store, policy),
+            scheduler,
+            AppInfo("1.0", "14"),
+            emergencyResetOnUnauthorized
+        )
 
     private fun respond(
         vararg commands: Pair<String, String>,
@@ -246,6 +254,39 @@ class CheckInTest {
         assertEquals(Enrolment.Revoked, store.value.enrolment)
         assertEquals(LockState.UNLOCKED, store.value.lockState)
         assertEquals(listOf("unlock"), policy.calls)
+        assertEquals(listOf("cancel check-ins"), scheduler.requests)
+    }
+
+    @Test
+    fun `emergency 401 clears Qist policies before stopping check-ins`() = runTest {
+        val store = InMemoryStore(enrolled.copy(lockState = LockState.LOCKED))
+        api.checkInResult = ApiResult.Unauthorized
+
+        assertEquals(CheckInOutcome.StoodDown, checkIn(store, emergencyResetOnUnauthorized = true).run())
+
+        // DeviceState is reset only after DevicePolicy confirms every Qist-owned restriction was cleared.
+        assertEquals(DeviceState(enrolment = Enrolment.Revoked), store.value)
+        assertEquals(listOf("release"), policy.calls)
+        assertEquals(listOf("cancel check-ins"), scheduler.requests)
+    }
+
+    @Test
+    fun `emergency 401 retries if Android refuses policy cleanup`() = runTest {
+        val store = InMemoryStore(enrolled)
+        val emergencyCheckIn = checkIn(store, emergencyResetOnUnauthorized = true)
+        api.checkInResult = ApiResult.Unauthorized
+        policy.result = PolicyResult.Failed("android refused the policy")
+
+        assertEquals(CheckInOutcome.RetryLater, emergencyCheckIn.run())
+        assertEquals(enrolled, store.value)
+        assertEquals(listOf("release"), policy.calls)
+        assertEquals(emptyList<String>(), scheduler.requests)
+
+        // The next check-in retries the same idempotent cleanup; it does not discard the credential prematurely.
+        policy.result = PolicyResult.Applied
+        assertEquals(CheckInOutcome.StoodDown, emergencyCheckIn.run())
+        assertEquals(DeviceState(enrolment = Enrolment.Revoked), store.value)
+        assertEquals(listOf("release", "release"), policy.calls)
         assertEquals(listOf("cancel check-ins"), scheduler.requests)
     }
 
