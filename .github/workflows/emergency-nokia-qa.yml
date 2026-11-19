@@ -1,0 +1,110 @@
+name: Nokia emergency recovery QA (no publishing)
+
+on:
+  push:
+    branches:
+      - emergency/nokia-factory-reset
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - '.github/workflows/emergency-nokia-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-builds:
+    name: Kotlin, lint, normal build and emergency signed build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew
+      - name: Normal build must compile, lint, and pass unit tests
+        run: |
+          set -euo pipefail
+          ./gradlew :app:check :app:assembleDebug --no-daemon
+          grep -R -q 'EMERGENCY_RESET_ON_UNAUTHORIZED = false' app/build/generated/source/buildConfig/debug
+      - name: Create throwaway QA signing key (never published)
+        run: |
+          set -euo pipefail
+          umask 077
+          keytool -genkeypair -noprompt -alias qist -keyalg RSA -keysize 2048 \
+            -validity 1 -keystore "$RUNNER_TEMP/one-device-qa.jks" \
+            -storepass 'temporary-qa-only-123' -keypass 'temporary-qa-only-123' \
+            -dname 'CN=Disposable QA, O=Qist QA, C=PK'
+      - name: Emergency mode must compile, lint, and pass unit tests
+        run: |
+          set -euo pipefail
+          ./gradlew :app:check :app:assembleRelease \
+            -Pqist.emergencyResetOnUnauthorized=true \
+            -Pqist.signing.storeFile="$RUNNER_TEMP/one-device-qa.jks" \
+            -Pqist.signing.storePassword='temporary-qa-only-123' \
+            -Pqist.signing.keyAlias=qist \
+            -Pqist.signing.keyPassword='temporary-qa-only-123' \
+            --no-daemon
+          grep -R -q 'EMERGENCY_RESET_ON_UNAUTHORIZED = true' app/build/generated/source/buildConfig/release
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+
+  emulator-release:
+    name: Real Device Owner release on Android API ${{ matrix.api }}
+    needs: test-builds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 35]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew
+      - name: Enable emulator virtualization
+        run: |
+          sudo chmod 666 /dev/kvm
+      - name: Create throwaway signing-key placeholder for emergency debug flag
+        run: |
+          set -euo pipefail
+          umask 077
+          keytool -genkeypair -noprompt -alias qist -keyalg RSA -keysize 2048 \
+            -validity 1 -keystore "$RUNNER_TEMP/one-device-qa.jks" \
+            -storepass 'temporary-qa-only-123' -keypass 'temporary-qa-only-123' \
+            -dname 'CN=Disposable QA, O=Qist QA, C=PK'
+      - name: Test real policy cleanup from persisted Revoked state
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_4
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest \
+              -Pqist.emergencyResetOnUnauthorized=true \
+              -Pqist.signing.storeFile="$RUNNER_TEMP/one-device-qa.jks" \
+              --no-daemon
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w -r \
+              -e class pk.qist.device.deviceadmin.DeviceOwnerReleaseTest \
+              pk.qist.device.test/androidx.test.runner.AndroidJUnitRunner | tee /tmp/emergency-qa-instrumentation.txt
+            ! grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' /tmp/emergency-qa-instrumentation.txt
+            grep -Eq 'OK \(1 test\)' /tmp/emergency-qa-instrumentation.txt
