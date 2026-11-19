@@ -5,6 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import java.io.IOException
 import kotlinx.coroutines.flow.first
+import pk.qist.device.BuildConfig
 import pk.qist.device.container
 import pk.qist.device.data.LockState
 
@@ -12,8 +13,12 @@ import pk.qist.device.data.LockState
 class CheckInWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val outcome = applicationContext.container.checkIn.run()
-        if (outcome != CheckInOutcome.RetryLater) applicationContext.container.customerSignin.refresh()
-        if (outcome == CheckInOutcome.Done) {
+        // A one-device emergency APK never restarts normal customer sign-in or
+        // Cloudflare APK update jobs while trying to clear Device Owner policies.
+        if (!BuildConfig.EMERGENCY_RESET_ON_UNAUTHORIZED && outcome != CheckInOutcome.RetryLater) {
+            applicationContext.container.customerSignin.refresh()
+        }
+        if (!BuildConfig.EMERGENCY_RESET_ON_UNAUTHORIZED && outcome == CheckInOutcome.Done) {
             try {
                 val container = applicationContext.container
                 container.scheduler.scheduleLockerUpdates()
