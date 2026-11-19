@@ -13,8 +13,12 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             context.container.scheduler.checkInNow()
-            context.container.scheduler.scheduleLockerUpdates()
-            context.container.scheduler.lockerUpdateNow()
+            // The one-phone recovery build must not fetch or install the shared
+            // production APK over itself before local policy cleanup finishes.
+            if (!pk.qist.device.BuildConfig.EMERGENCY_RESET_ON_UNAUTHORIZED) {
+                context.container.scheduler.scheduleLockerUpdates()
+                context.container.scheduler.lockerUpdateNow()
+            }
         }
     }
 }
