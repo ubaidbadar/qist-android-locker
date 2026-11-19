@@ -19,7 +19,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import pk.qist.device.BuildConfig
+import pk.qist.device.checkin.CheckIn
 import pk.qist.device.checkin.CheckInOutcome
+import pk.qist.device.checkin.CommandRunner
 import pk.qist.device.container
 import pk.qist.device.data.DeviceState
 import pk.qist.device.data.Enrolment
@@ -93,10 +95,20 @@ class DeviceOwnerReleaseTest {
         if (BuildConfig.EMERGENCY_RESET_ON_UNAUTHORIZED) {
             // The Nokia path: the old APK persisted Revoked and stopped check-ins.
             // Local cleanup must not require a working network or a backend record.
+            val app = context.container
+            val emergencyCheckIn = CheckIn(
+                app.api,
+                app.store,
+                policy,
+                CommandRunner(app.store, policy),
+                app.scheduler,
+                app.appInfo,
+                emergencyResetOnUnauthorized = true
+            )
             runBlocking {
-                context.container.store.updateData { DeviceState(enrolment = Enrolment.Revoked) }
-                assertEquals(CheckInOutcome.StoodDown, context.container.checkIn.run())
-                assertEquals(Enrolment.Revoked, context.container.store.data.first().enrolment)
+                app.store.updateData { DeviceState(enrolment = Enrolment.Revoked) }
+                assertEquals(CheckInOutcome.StoodDown, emergencyCheckIn.run())
+                assertEquals(Enrolment.Revoked, app.store.data.first().enrolment)
             }
             assertTrue("Recovery leaves Device Owner until reset", dpm.isDeviceOwnerApp(packageName))
         }
