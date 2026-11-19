@@ -62,6 +62,12 @@ class DpmDevicePolicy(
             val allQistRestrictions = (restrictions + networkRestrictions()).distinct()
             val appliedRestrictions = dpm.getUserRestrictions(admin)
             val restrictionsRemain = allQistRestrictions.any { appliedRestrictions.getBoolean(it) }
+            // DevicePolicyManager reports this admin's policies; Settings uses the effective
+            // restrictions from UserManager, which may differ when another source applies one.
+            val userManager = context.getSystemService(UserManager::class.java)
+                ?: return PolicyResult.Failed(EFFECTIVE_RESTRICTIONS_UNVERIFIED)
+            val effectiveRestrictions = userManager.userRestrictions
+            val effectiveRestrictionsRemain = allQistRestrictions.any { effectiveRestrictions.getBoolean(it) }
             val uninstallBlocked = dpm.isUninstallBlocked(admin, packageName)
             val lockTaskPackagesRemain = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                 dpm.getLockTaskPackages(admin).isNotEmpty()
@@ -75,6 +81,7 @@ class DpmDevicePolicy(
 
             when {
                 restrictionsRemain -> PolicyResult.Failed(RESTRICTIONS_REMAIN)
+                effectiveRestrictionsRemain -> PolicyResult.Failed(EFFECTIVE_RESTRICTIONS_REMAIN)
                 uninstallBlocked -> PolicyResult.Failed(UNINSTALL_STILL_BLOCKED)
                 lockTaskPackagesRemain -> PolicyResult.Failed(LOCK_TASK_STILL_CONFIGURED)
                 lockHomeEnabled || qistStillDefaultHome -> PolicyResult.Failed(LOCK_HOME_STILL_CONFIGURED)
@@ -180,6 +187,8 @@ class DpmDevicePolicy(
         const val REFUSED = "android refused the policy"
         const val OWNER_REMAINS = "android still reports this app as device owner"
         const val RESTRICTIONS_REMAIN = "android did not clear all Qist restrictions"
+        const val EFFECTIVE_RESTRICTIONS_REMAIN = "android still enforces device restrictions"
+        const val EFFECTIVE_RESTRICTIONS_UNVERIFIED = "android restrictions could not be verified"
         const val UNINSTALL_STILL_BLOCKED = "android still blocks Qist uninstall"
         const val LOCK_TASK_STILL_CONFIGURED = "android still has Qist lock-task packages configured"
         const val LOCK_HOME_STILL_CONFIGURED = "android still has Qist configured as the Home app"
