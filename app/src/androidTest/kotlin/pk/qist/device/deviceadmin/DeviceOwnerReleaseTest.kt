@@ -35,7 +35,7 @@ import pk.qist.device.data.Enrolment
 @RunWith(AndroidJUnit4::class)
 class DeviceOwnerReleaseTest {
     @Test
-    fun releaseClearsQistPoliciesAndVerifiesDeviceOwnerRemoval() {
+    fun emergencyReleaseClearsPoliciesWhileDeviceOwnerRemains() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val dpm = context.getSystemService(DevicePolicyManager::class.java)
@@ -144,18 +144,15 @@ class DeviceOwnerReleaseTest {
             )
         }
 
-        // Clearing restrictions is not the same as relinquishing Device Owner; verify both separately.
-        assertTrue("Device Owner must remain until the explicit hand-back step", dpm.isDeviceOwnerApp(packageName))
-        assertEquals(PolicyResult.Applied, policy.relinquish())
-        assertFalse("Android must confirm Qist is no longer Device Owner", dpm.isDeviceOwnerApp(packageName))
-
-        // Idempotency matters if the process is killed after Android clears ownership but before local state saves.
-        assertEquals(PolicyResult.Applied, policy.relinquish())
-
+        // This is the actual Nokia emergency flow: Qist must REMAIN Device Owner
+        // until Android Settings performs the factory reset. Calling the test-only
+        // clearDeviceOwnerApp here would remove ownership prematurely, and can kill
+        // the instrumentation process before its result is observable.
+        assertTrue("Cleanup must not silently remove Device Owner", dpm.isDeviceOwnerApp(packageName))
         val effectiveRestrictions = userManager.getUserRestrictions()
         expectedRestrictions.forEach { restriction ->
             assertFalse(
-                "No Qist restriction should remain after hand-back: $restriction",
+                "No recovery restriction should still be enforced: $restriction",
                 effectiveRestrictions.getBoolean(restriction)
             )
         }
