@@ -131,8 +131,10 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
  * package-replaced work behind a network constraint from the old installation.
  * Production check-ins continue to require connectivity.
  */
-internal fun immediateCheckInConstraints(emergency: Boolean): Constraints {
-    return if (emergency) Constraints.NONE else Constraints.Builder()
+internal fun immediateCheckInConstraints(emergency: Boolean): Constraints = if (emergency) {
+    Constraints.NONE
+} else {
+    Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
         .build()
 }
