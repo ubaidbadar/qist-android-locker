@@ -60,16 +60,15 @@ class CheckInTest {
     private val scheduler = RecordingScheduler()
     private val enrolled = DeviceState(enrolment = Enrolment.Enrolled("d1", "d1.secret"), checkInSeconds = 900)
 
-    private fun checkIn(store: InMemoryStore, emergencyResetOnUnauthorized: Boolean = false) =
-        CheckIn(
-            api,
-            store,
-            policy,
-            CommandRunner(store, policy),
-            scheduler,
-            AppInfo("1.0", "14"),
-            emergencyResetOnUnauthorized
-        )
+    private fun checkIn(store: InMemoryStore, emergencyResetOnUnauthorized: Boolean = false) = CheckIn(
+        api,
+        store,
+        policy,
+        CommandRunner(store, policy),
+        scheduler,
+        AppInfo("1.0", "14"),
+        emergencyResetOnUnauthorized
+    )
 
     private fun respond(
         vararg commands: Pair<String, String>,
