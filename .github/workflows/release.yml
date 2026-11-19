@@ -32,6 +32,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
+      - name: Refuse to publish a one-device emergency build to the shared APK URL
+        shell: bash
+        run: |
+          if grep -Fq 'versionName = "0.2.3-emergency"' app/build.gradle.kts; then
+            echo "::error::The Nokia recovery source must never be published to the shared Cloudflare URL."
+            exit 1
+          fi
+
       - name: Set up JDK 17
         uses: actions/setup-java@v6
         with:
