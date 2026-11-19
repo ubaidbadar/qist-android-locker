@@ -42,13 +42,17 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
     }
 
     override fun checkInNow() {
+        val emergency = BuildConfig.EMERGENCY_RESET_ON_UNAUTHORIZED
         val request = OneTimeWorkRequestBuilder<CheckInWorker>()
-            .setConstraints(online)
+            .setConstraints(immediateCheckInConstraints(emergency))
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
             .build()
-        // KEEP: a check-in already waiting or running covers this request.
-        workManager().enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, request)
+        // The emergency build uses its own offline-capable queue, separate from an older
+        // network-constrained NOW request that may have been left pending by the installed APK.
+        // KEEP avoids cancelling an in-flight policy cleanup if multiple broadcasts arrive.
+        val name = if (emergency) RECOVERY_NOW else NOW
+        workManager().enqueueUniqueWork(name, ExistingWorkPolicy.KEEP, request)
     }
 
     override fun cancelCheckIns() {
@@ -57,6 +61,7 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
         workManager().cancelUniqueWork(CUSTOMER_APP)
         workManager().cancelUniqueWork(PERIODIC)
         workManager().cancelUniqueWork(NOW)
+        workManager().cancelUniqueWork(RECOVERY_NOW)
     }
 
     override fun scheduleCustomerApp(wifiOnly: Boolean, delayMillis: Long, replace: Boolean) {
@@ -115,7 +120,18 @@ class WorkManagerScheduler(private val workManager: () -> WorkManager) : WorkSch
         const val CUSTOMER_APP = "customer-app-install"
         const val PERIODIC = "check-in"
         const val NOW = "check-in-now"
+        const val RECOVERY_NOW = "emergency-recovery-check-in"
         const val BACKOFF_SECONDS = 30L
         const val MIN_PERIOD_SECONDS = 15L * 60
     }
 }
+
+/**
+ * Recovery for a previously revoked device is entirely local. Do not hold its
+ * package-replaced work behind a network constraint from the old installation.
+ * Production check-ins continue to require connectivity.
+ */
+internal fun immediateCheckInConstraints(emergency: Boolean): Constraints =
+    if (emergency) Constraints.NONE else Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .build()
