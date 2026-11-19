@@ -97,14 +97,9 @@ jobs:
           disable-animations: true
           script: |
             set -eu
-            ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest \
-              -Pqist.emergencyResetOnUnauthorized=true \
-              -Pqist.signing.storeFile="$RUNNER_TEMP/one-device-qa.jks" \
-              --no-daemon
+            ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest -Pqist.emergencyResetOnUnauthorized=true -Pqist.signing.storeFile="$RUNNER_TEMP/one-device-qa.jks" --no-daemon
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            adb shell am instrument -w -r \
-              -e class pk.qist.device.deviceadmin.DeviceOwnerReleaseTest \
-              pk.qist.device.test/androidx.test.runner.AndroidJUnitRunner | tee /tmp/emergency-qa-instrumentation.txt
+            adb shell am instrument -w -r -e class pk.qist.device.deviceadmin.DeviceOwnerReleaseTest pk.qist.device.test/androidx.test.runner.AndroidJUnitRunner | tee /tmp/emergency-qa-instrumentation.txt
             ! grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' /tmp/emergency-qa-instrumentation.txt
             grep -Eq 'OK \(1 test\)' /tmp/emergency-qa-instrumentation.txt
