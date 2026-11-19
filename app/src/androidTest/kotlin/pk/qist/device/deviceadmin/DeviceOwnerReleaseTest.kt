@@ -9,20 +9,20 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.UserManager
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import pk.qist.device.BuildConfig
-import pk.qist.device.checkin.CheckInOutcome
-import pk.qist.device.container
-import pk.qist.device.data.DeviceState
-import pk.qist.device.data.Enrolment
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import pk.qist.device.BuildConfig
+import pk.qist.device.checkin.CheckInOutcome
+import pk.qist.device.container
+import pk.qist.device.data.DeviceState
+import pk.qist.device.data.Enrolment
 
 /**
  * Exercises the real framework DevicePolicyManager on a clean emulator.
