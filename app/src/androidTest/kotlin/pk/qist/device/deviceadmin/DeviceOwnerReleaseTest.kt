@@ -9,6 +9,13 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.UserManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import pk.qist.device.BuildConfig
+import pk.qist.device.checkin.CheckInOutcome
+import pk.qist.device.container
+import pk.qist.device.data.DeviceState
+import pk.qist.device.data.Enrolment
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -83,6 +90,18 @@ class DeviceOwnerReleaseTest {
         assertTrue("Qist should be uninstall-blocked before repayment", dpm.isUninstallBlocked(admin, packageName))
         assertTrue("Qist should be Device Owner until release is complete", dpm.isDeviceOwnerApp(packageName))
 
+        if (BuildConfig.EMERGENCY_RESET_ON_UNAUTHORIZED) {
+            // The Nokia path: the old APK persisted Revoked and stopped check-ins.
+            // Local cleanup must not require a working network or a backend record.
+            runBlocking {
+                context.container.store.updateData { DeviceState(enrolment = Enrolment.Revoked) }
+                assertEquals(CheckInOutcome.StoodDown, context.container.checkIn.run())
+                assertEquals(Enrolment.Revoked, context.container.store.data.first().enrolment)
+            }
+            assertTrue("Recovery leaves Device Owner until reset", dpm.isDeviceOwnerApp(packageName))
+        }
+
+        // Idempotent even if the emergency check-in already cleaned up policy.
         assertEquals(PolicyResult.Applied, policy.release())
 
         val afterRelease = dpm.getUserRestrictions(admin)
