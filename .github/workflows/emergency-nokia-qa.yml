@@ -96,7 +96,7 @@ jobs:
           profile: pixel_4
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest \
               -Pqist.emergencyResetOnUnauthorized=true \
               -Pqist.signing.storeFile="$RUNNER_TEMP/one-device-qa.jks" \
