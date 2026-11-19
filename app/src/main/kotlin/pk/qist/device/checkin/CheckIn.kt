@@ -41,13 +41,16 @@ class CheckIn(
         val state = store.data.first()
         val enrolled = when (val enrolment = state.enrolment) {
             is Enrolment.Enrolled -> enrolment
+
             is Enrolment.Releasing -> return confirmRelease(enrolment)
+
             Enrolment.Revoked -> {
                 // The previous production build may already have stopped check-ins after its first 401.
                 // The recovery APK must still be able to clear policies when it is installed over that state.
                 if (emergencyResetOnUnauthorized) return emergencyRelease()
                 return CheckInOutcome.NotEnrolled
             }
+
             else -> return CheckInOutcome.NotEnrolled
         }
         val request =
