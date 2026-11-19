@@ -304,6 +304,70 @@ class CheckInTest {
     }
 
     @Test
+    fun `emergency mode does not release an enrolled phone merely for being offline`() = runTest {
+        val store = InMemoryStore(enrolled)
+        api.checkInResult = ApiResult.NetworkError
+
+        assertEquals(CheckInOutcome.RetryLater, checkIn(store, emergencyResetOnUnauthorized = true).run())
+
+        assertEquals(enrolled, store.value)
+        assertEquals(emptyList<String>(), policy.calls)
+        assertEquals(emptyList<String>(), scheduler.requests)
+    }
+
+    @Test
+    fun `emergency mode does not release an enrolled phone after a transient server failure`() = runTest {
+        val store = InMemoryStore(enrolled)
+        api.checkInResult = ApiResult.ServerError(503)
+
+        assertEquals(CheckInOutcome.RetryLater, checkIn(store, emergencyResetOnUnauthorized = true).run())
+
+        assertEquals(enrolled, store.value)
+        assertEquals(emptyList<String>(), policy.calls)
+        assertEquals(emptyList<String>(), scheduler.requests)
+    }
+
+    @Test
+    fun `failed local cleanup of an already revoked phone is retried without losing state`() = runTest {
+        val previouslyRevoked = enrolled.copy(enrolment = Enrolment.Revoked)
+        val store = InMemoryStore(previouslyRevoked)
+        val recovery = checkIn(store, emergencyResetOnUnauthorized = true)
+        policy.result = PolicyResult.Failed("android still enforces device restrictions")
+
+        assertEquals(CheckInOutcome.RetryLater, recovery.run())
+        assertEquals(previouslyRevoked, store.value)
+        assertEquals(emptyList<String>(), scheduler.requests)
+        assertEquals(0, api.checkIns.size)
+
+        policy.result = PolicyResult.Applied
+        assertEquals(CheckInOutcome.StoodDown, recovery.run())
+        assertEquals(DeviceState(enrolment = Enrolment.Revoked), store.value)
+        assertEquals(listOf("release", "release"), policy.calls)
+        assertEquals(listOf("cancel check-ins"), scheduler.requests)
+    }
+
+    @Test
+    fun `normal builds never perform local emergency release of a previously revoked phone`() = runTest {
+        val store = InMemoryStore(enrolled.copy(enrolment = Enrolment.Revoked))
+
+        assertEquals(CheckInOutcome.NotEnrolled, checkIn(store).run())
+
+        assertEquals(emptyList<String>(), policy.calls)
+        assertEquals(0, api.checkIns.size)
+        assertEquals(emptyList<String>(), scheduler.requests)
+    }
+
+    @Test
+    fun `emergency build does not release a phone that was never enrolled`() = runTest {
+        val store = InMemoryStore()
+
+        assertEquals(CheckInOutcome.NotEnrolled, checkIn(store, emergencyResetOnUnauthorized = true).run())
+
+        assertEquals(emptyList<String>(), policy.calls)
+        assertEquals(0, api.checkIns.size)
+    }
+
+    @Test
     fun `a 401 on an acknowledgement also stands down`() = runTest {
         val store = InMemoryStore(enrolled)
         respond("c1" to "lock", "c2" to "unlock")
