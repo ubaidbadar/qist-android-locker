@@ -46,8 +46,10 @@ class DeviceOwnerReleaseTest {
         provisionDeviceOwnerIfNeeded(instrumentation, dpm, admin, packageName)
         assertTrue("Qist must be Device Owner before release", dpm.isDeviceOwnerApp(packageName))
 
-        // Match production's restriction set, including its release-build USB-debugging policy.
-        val policy = DpmDevicePolicy(context, dpm, admin, blockUsbDebugging = true)
+        // Keep ADB alive while Android instrumentation runs. Enabling DISALLOW_DEBUGGING_FEATURES
+        // would disconnect the test runner before it can report a result. The production release
+        // still clears USB-debugging restrictions; verify that specific policy on a physical phone.
+        val policy = DpmDevicePolicy(context, dpm, admin, blockUsbDebugging = false)
         assertEquals(PolicyResult.Applied, policy.protect())
 
         val lockHome = ComponentName(packageName, "$packageName.lock.LockHome")
@@ -82,7 +84,6 @@ class DeviceOwnerReleaseTest {
             add(UserManager.DISALLOW_FACTORY_RESET)
             add(UserManager.DISALLOW_SAFE_BOOT)
             add(UserManager.DISALLOW_ADD_USER)
-            add(UserManager.DISALLOW_DEBUGGING_FEATURES)
             addAll(networkRestrictions)
         }
         val beforeRelease = dpm.getUserRestrictions(admin)
